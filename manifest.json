@@ -1,0 +1,22 @@
+{
+  "manifest_version": 2,
+  "name": "Pictures New Tab",
+  "description" : "TODO: enter a description here",
+  "version": "1.0",
+  "homepage_url": "https://github.com/qiushihe/chrome-pictures-newtab",
+  "icons": {
+    "128": "icon_128.png",
+    "48": "icon_48.png",
+    "16": "icon_16.png"
+  },
+  "incognito": "split",
+  "chrome_url_overrides": {
+    "newtab": "newtab.html"
+  },
+  "permissions": [
+    "tabs",
+    "<all_urls>",
+    "bookmarks",
+    "management"
+  ]
+}
