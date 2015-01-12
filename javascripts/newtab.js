@@ -10,9 +10,10 @@
     function ChromePicturesNewTab($viewport) {
       this.$viewport = $viewport;
       this.$photo = $("#photo");
-      this.$photoTitle = $("#photo-title");
       this.$photoTitleLink = $("#photo-title-link");
       this.$photoTitleOwnerLink = $("#photo-title-owner-link");
+      this.$photoRefreshLink = $("#photo-refresh-link");
+      this.$photoPinLink = $("#photo-pin-link");
       this.viewportWidth = this.$viewport.width();
       this.viewportHeight = this.$viewport.height();
       window.addEventListener("resize", (function(_this) {
@@ -23,19 +24,29 @@
       })(this), false);
       this.ensureCachedPhoto().then((function(_this) {
         return function(photo) {
+          var timedOut;
           _this.displayPhoto(photo);
-          if (((new Date()).getTime() - parseInt(photo.timestamp || 0, 10)) > 60000) {
-            return console.log("need reload");
+          timedOut = ((new Date()).getTime() - parseInt(photo.timestamp || 0, 10)) > 60000;
+          if (timedOut && !photo.isPinned) {
+            return _this.refreshPhoto();
           }
         };
       })(this));
       this.bookmarksBar = new BookmarksBar();
       this.bookmarksBar.render(this.$viewport[0]);
-      $("#photo-title-refresh-link").on("click", (function(_this) {
+      this.$photoRefreshLink.on("click", (function(_this) {
         return function() {
-          console.log("refresh");
           return _this.refreshPhoto().then(function(photo) {
             return _this.displayPhoto(photo);
+          });
+        };
+      })(this));
+      this.$photoPinLink.on("click", (function(_this) {
+        return function() {
+          return chrome.storage.local.set({
+            photoIsPinned: true
+          }, function() {
+            return _this.$photoPinLink.text("Pinned");
           });
         };
       })(this));
@@ -46,7 +57,12 @@
       this.$photoTitleLink.text(photo.title);
       this.$photoTitleLink.attr("href", photo.webUrl);
       this.$photoTitleOwnerLink.html("&copy; " + photo.ownerName);
-      return this.$photoTitleOwnerLink.attr("href", photo.ownerWebUrl);
+      this.$photoTitleOwnerLink.attr("href", photo.ownerWebUrl);
+      if (photo.isPinned) {
+        return this.$photoPinLink.text("Pinned");
+      } else {
+        return this.$photoPinLink.text("Pin");
+      }
     };
 
     ChromePicturesNewTab.prototype.refreshPhoto = function() {
@@ -120,7 +136,8 @@
             photoWebUrl: photo.webUrl,
             photoOwnerName: photo.ownerName,
             photoOwnerWebUrl: photo.ownerWebUrl,
-            photoTimestamp: (new Date()).getTime()
+            photoTimestamp: (new Date()).getTime(),
+            photoIsPinned: false
           }, function() {
             console.log("Photo saved");
             return resolve();

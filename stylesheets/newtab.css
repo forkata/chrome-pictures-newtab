@@ -19,7 +19,7 @@ body {
   background-repeat: no-repeat;
 }
 
-#photo-title {
+#photo-footer {
   position: absolute;
   bottom: 0px;
   left: 0px;
@@ -31,7 +31,7 @@ body {
   width: 100%;
 }
 
-#photo-title > a {
+#photo-footer > a {
   color: white;
   text-decoration: none;
   line-height: 16px;
@@ -39,8 +39,13 @@ body {
   cursor: pointer;
 }
 
-#photo-title > a:hover {
+#photo-footer > a:hover {
   opacity: 1;
+}
+
+#photo-footer > a.right {
+  float: right;
+  padding-right: 6px;
 }
 
 #photo-title-link {
@@ -49,13 +54,6 @@ body {
 
 #photo-title-owner-link {
   padding-left: 3px;
-}
-
-#photo-title-refresh-link {
-  position: absolute;
-  top: 0px;
-  right: 6px;
-  text-align: right;
 }
 
 /* Bookmark Item */

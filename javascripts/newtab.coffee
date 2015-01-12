@@ -5,9 +5,10 @@ class ChromePicturesNewTab
     @$viewport = $viewport
 
     @$photo = $("#photo")
-    @$photoTitle = $("#photo-title")
     @$photoTitleLink = $("#photo-title-link")
     @$photoTitleOwnerLink = $("#photo-title-owner-link")
+    @$photoRefreshLink = $("#photo-refresh-link")
+    @$photoPinLink = $("#photo-pin-link")
 
     @viewportWidth = @$viewport.width()
     @viewportHeight = @$viewport.height()
@@ -18,15 +19,21 @@ class ChromePicturesNewTab
 
     @ensureCachedPhoto().then (photo) =>
       @displayPhoto(photo)
-      if ((new Date()).getTime() -  parseInt(photo.timestamp || 0, 10)) > 60000
+
+      timedOut = ((new Date()).getTime() -  parseInt(photo.timestamp || 0, 10)) > 60000
+      if timedOut && !photo.isPinned
         @refreshPhoto()
 
     @bookmarksBar = new BookmarksBar()
     @bookmarksBar.render(@$viewport[0])
 
-    $("#photo-title-refresh-link").on "click", =>
+    @$photoRefreshLink.on "click", =>
       @refreshPhoto().then (photo) =>
         @displayPhoto(photo)
+
+    @$photoPinLink.on "click", =>
+      chrome.storage.local.set { photoIsPinned: true }, =>
+        @$photoPinLink.text("Pinned")
 
   displayPhoto: (photo) ->
     @$photo.css "background-image", "url('#{photo.url}')"
@@ -36,6 +43,11 @@ class ChromePicturesNewTab
     @$photoTitleLink.attr("href", photo.webUrl)
     @$photoTitleOwnerLink.html("&copy; #{photo.ownerName}")
     @$photoTitleOwnerLink.attr("href", photo.ownerWebUrl)
+
+    if photo.isPinned
+      @$photoPinLink.text("Pinned")
+    else
+      @$photoPinLink.text("Pin")
 
   refreshPhoto: ->
     @fetchPhoto().then((photo) =>
@@ -97,6 +109,7 @@ class ChromePicturesNewTab
           photoOwnerName: photo.ownerName
           photoOwnerWebUrl: photo.ownerWebUrl
           photoTimestamp: (new Date()).getTime()
+          photoIsPinned: false
         }, ->
           console.log "Photo saved"
           resolve()
