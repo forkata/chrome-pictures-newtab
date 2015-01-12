@@ -3,9 +3,218 @@
   var ChromePicturesNewTab;
 
   ChromePicturesNewTab = (function() {
+    ChromePicturesNewTab.FetchSize = 500;
+
     function ChromePicturesNewTab($viewport) {
       this.$viewport = $viewport;
+      this.$photo = $("#photo");
+      this.$photoTitle = $("#photo-title");
+      this.$photoTitleLink = $("#photo-title-link");
+      this.$photoTitleOwnerLink = $("#photo-title-owner-link");
+      this.viewportWidth = this.$viewport.width();
+      this.viewportHeight = this.$viewport.height();
+      window.addEventListener("resize", (function(_this) {
+        return function() {
+          _this.viewportWidth = _this.$viewport.width();
+          return _this.viewportHeight = _this.$viewport.height();
+        };
+      })(this), false);
+      this.cachedPhoto().then((function(_this) {
+        return function(photo) {
+          _this.$photo.css("background-image", "url('" + photo.url + "')");
+          _this.$photoTitleLink.text(photo.title);
+          _this.$photoTitleLink.attr("href", photo.webUrl);
+          _this.$photoTitleOwnerLink.html("&copy; " + photo.ownerName);
+          _this.$photoTitleOwnerLink.attr("href", photo.ownerWebUrl);
+          return _this.fetchPhoto().then(function(photo) {
+            return _this.savePhoto(photo);
+          });
+        };
+      })(this), function() {
+        return this.fetchPhoto().then((function(_this) {
+          return function(photo) {
+            _this.savePhoto(photo);
+            return _this.$photo.css("background-image", "url('" + (photo.getAttribute("url")) + "')");
+          };
+        })(this));
+      });
     }
+
+    ChromePicturesNewTab.prototype.cachedPhoto = function() {
+      return new RSVP.Promise(function(resolve, reject) {
+        var err;
+        try {
+          return chrome.storage.local.get(["photoDataUri", "photoUrl", "photoContentType", "photoTitle", "photoWebUrl", "photoOwnerName", "photoOwnerWebUrl"], function(data) {
+            var _ref;
+            if (((_ref = data.photoDataUri) != null ? _ref.length : void 0) > 0) {
+              console.log("Photo cache hit");
+              return resolve({
+                dataUri: data.photoDataUri,
+                url: data.photoUrl,
+                contentType: data.photoContentType,
+                title: data.photoTitle,
+                webUrl: data.photoWebUrl,
+                ownerName: data.photoOwnerName,
+                ownerWebUrl: data.photoOwnerWebUrl
+              });
+            } else {
+              console.warn("Photo cache miss");
+              return reject();
+            }
+          });
+        } catch (_error) {
+          err = _error;
+          console.error("Photo cache error");
+          return reject(err);
+        }
+      });
+    };
+
+    ChromePicturesNewTab.prototype.savePhoto = function(photo) {
+      console.log("saving", photo);
+      return new RSVP.Promise(function(resolve, reject) {
+        var err;
+        try {
+          return chrome.storage.local.set({
+            photoDataUri: photo.dataUri,
+            photoUrl: photo.url,
+            photoContentType: photo.contentType,
+            photoTitle: photo.title,
+            photoWebUrl: photo.webUrl,
+            photoOwnerName: photo.ownerName,
+            photoOwnerWebUrl: photo.ownerWebUrl
+          }, function() {
+            console.log("Photo saved");
+            return resolve();
+          });
+        } catch (_error) {
+          err = _error;
+          console.error("Error saving photo", err);
+          return reject(err);
+        }
+      });
+    };
+
+    ChromePicturesNewTab.prototype.fetchPhoto = function() {
+      return new RSVP.Promise((function(_this) {
+        return function(resolve, reject) {
+          return _this.fetchPhotos().then(function(resp) {
+            var index, ownerName, ownerWebUrl, photo, photos, title, webUrl;
+            photos = $(resp).find("photo").toArray();
+            index = parseInt(Math.random() * photos.length * 10, 10) % photos.length;
+            photo = photos[index];
+            title = photo.getAttribute("title");
+            webUrl = _this.photoWebUrl(photo.getAttribute("owner"), photo.getAttribute("id"));
+            ownerName = photo.getAttribute("ownername");
+            ownerWebUrl = _this.ownerWebUrl(photo.getAttribute("owner"));
+            console.log("Use photo at index " + index + " of " + photos.length + " photos", photo);
+            console.log(" * title: " + title);
+            console.log(" * webUrl: " + webUrl);
+            console.log(" * ownerName: " + ownerName);
+            return _this.fetchPhotoSizes(photo.getAttribute("id")).then(function(resp) {
+              var contentType, largestSize, url;
+              largestSize = _.reduce($(resp).find("size").toArray(), function(largest, size) {
+                var largestArea, largestHeight, largestWidth, sizeArea, sizeHeight, sizeWidth;
+                if (!largest) {
+                  largest = size;
+                }
+                largestWidth = largest.getAttribute("width");
+                largestHeight = largest.getAttribute("height");
+                sizeWidth = size.getAttribute("width");
+                sizeHeight = size.getAttribute("height");
+                if (sizeWidth <= _this.viewportWidth || sizeHeight <= _this.viewportHeight) {
+                  largestArea = largestWidth * largestHeight;
+                  sizeArea = sizeWidth * sizeHeight;
+                  if (sizeArea > largestArea) {
+                    largest = size;
+                  }
+                }
+                return largest;
+              }, null);
+              url = largestSize.getAttribute("source");
+              contentType = "image/" + (url.match(/\.([^.]+)$/)[1]);
+              photo.setAttribute("url", url);
+              photo.setAttribute("content-type", contentType);
+              return _this.urlToBase64(url, contentType).then(function(dataUri) {
+                return resolve({
+                  dataUri: dataUri,
+                  url: url,
+                  contentType: contentType,
+                  title: title,
+                  webUrl: webUrl,
+                  ownerName: ownerName,
+                  ownerWebUrl: ownerWebUrl
+                });
+              });
+            });
+          })["catch"](function() {
+            console.error("Error fetching photo", arguments);
+            return reject.apply(null, arguments);
+          });
+        };
+      })(this));
+    };
+
+    ChromePicturesNewTab.prototype.fetchPhotos = function() {
+      return this.flickrApiRequest("flickr.photos.search", {
+        per_page: ChromePicturesNewTab.FetchSize,
+        page: 1,
+        tags: "NASA",
+        extras: "license,owner_name",
+        license: "1,2,3,4,5,7"
+      });
+    };
+
+    ChromePicturesNewTab.prototype.fetchPhotoSizes = function(id) {
+      return this.flickrApiRequest("flickr.photos.getSizes", {
+        photo_id: id
+      });
+    };
+
+    ChromePicturesNewTab.prototype.flickrApiRequest = function(method, params) {
+      return new RSVP.Promise(function(resolve, reject) {
+        return $.ajax({
+          type: "GET",
+          url: "https://api.flickr.com/services/rest",
+          data: _.extend({
+            method: method,
+            api_key: "7d05080a526b965ba4978c0656dfdaf3"
+          }, params)
+        }).done(function(resp, status, req) {
+          return resolve(resp, status, req);
+        }).fail(function(req, status, message) {
+          return reject(req, status, message);
+        });
+      });
+    };
+
+    ChromePicturesNewTab.prototype.photoWebUrl = function(userId, photoId) {
+      return "https://www.flickr.com/photos/" + userId + "/" + photoId;
+    };
+
+    ChromePicturesNewTab.prototype.ownerWebUrl = function(userId) {
+      return "https://www.flickr.com/photos/" + userId;
+    };
+
+    ChromePicturesNewTab.prototype.urlToBase64 = function(url, contentType) {
+      return new RSVP.Promise(function(resolve) {
+        var canvas, ctx, img;
+        canvas = document.createElement('CANVAS');
+        ctx = canvas.getContext('2d');
+        img = new Image();
+        img.crossOrigin = 'Anonymous';
+        img.onload = function() {
+          var dataURL;
+          canvas.height = img.height;
+          canvas.width = img.width;
+          ctx.drawImage(img, 0, 0);
+          dataURL = canvas.toDataURL(contentType);
+          resolve(dataURL);
+          return $(canvas).remove();
+        };
+        return img.src = url;
+      });
+    };
 
     return ChromePicturesNewTab;
 
@@ -13,7 +222,7 @@
 
   window.onload = function() {
     var classicNewTab;
-    return classicNewTab = new ChromePicturesNewTab(document.body);
+    return classicNewTab = new ChromePicturesNewTab($(document.body));
   };
 
 }).call(this);

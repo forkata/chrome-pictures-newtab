@@ -4,4 +4,39 @@
 
 body {
   overflow: hidden;
+  background-color: black;
+}
+
+#photo {
+  width: 100%;
+  height: 100%;
+  position: absolute;
+  top: 0px;
+  left: 0px;
+
+  background-position: center;
+  background-size: cover;
+  background-repeat: no-repeat;
+}
+
+#photo-title {
+  position: absolute;
+  bottom: 6px;
+  left: 10px;
+  color: white;
+  text-shadow: 1px 1px 1px black;
+  font-size: 10px;
+  font-family: sans-serif;
+  opacity: 0.6;
+}
+
+#photo-title-link {
+  color: white;
+  text-decoration: none;
+}
+
+#photo-title-owner-link {
+  color: white;
+  text-decoration: none;
+  padding-left: 3px;
 }

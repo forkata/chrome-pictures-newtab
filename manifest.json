@@ -17,6 +17,8 @@
     "tabs",
     "<all_urls>",
     "bookmarks",
-    "management"
+    "management",
+    "storage",
+    "unlimitedStorage"
   ]
 }
