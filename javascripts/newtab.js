@@ -50,6 +50,18 @@
           });
         };
       })(this));
+      document.body.addEventListener("click", (function(_this) {
+        return function(event) {
+          if (!$(event.target).closest(".bookmarks-popup").length) {
+            return _this.bookmarksBar.hidePopupIfPresent();
+          }
+        };
+      })(this), false);
+      window.addEventListener("resize", (function(_this) {
+        return function() {
+          return _this.bookmarksBar.hidePopupIfPresent();
+        };
+      })(this), false);
     }
 
     ChromePicturesNewTab.prototype.displayPhoto = function(photo) {

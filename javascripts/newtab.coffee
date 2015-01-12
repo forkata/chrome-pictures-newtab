@@ -35,6 +35,15 @@ class ChromePicturesNewTab
       chrome.storage.local.set { photoIsPinned: true }, =>
         @$photoPinLink.text("Pinned")
 
+    document.body.addEventListener "click", (event) =>
+      unless $(event.target).closest(".bookmarks-popup").length
+        @bookmarksBar.hidePopupIfPresent()
+    , false
+
+    window.addEventListener "resize", =>
+      @bookmarksBar.hidePopupIfPresent()
+    , false
+
   displayPhoto: (photo) ->
     @$photo.css "background-image", "url('#{photo.url}')"
     # @$photo.css "background-image", "url(#{photo.dataUri})"
