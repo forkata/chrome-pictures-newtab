@@ -3,6 +3,8 @@
   var ChromePicturesNewTab;
 
   ChromePicturesNewTab = (function() {
+    var BookmarkItem, BookmarksBar, BookmarksList, BookmarksPopup;
+
     ChromePicturesNewTab.FetchSize = 500;
 
     function ChromePicturesNewTab($viewport) {
@@ -19,32 +21,65 @@
           return _this.viewportHeight = _this.$viewport.height();
         };
       })(this), false);
-      this.cachedPhoto().then((function(_this) {
+      this.ensureCachedPhoto().then((function(_this) {
         return function(photo) {
-          _this.$photo.css("background-image", "url('" + photo.url + "')");
-          _this.$photoTitleLink.text(photo.title);
-          _this.$photoTitleLink.attr("href", photo.webUrl);
-          _this.$photoTitleOwnerLink.html("&copy; " + photo.ownerName);
-          _this.$photoTitleOwnerLink.attr("href", photo.ownerWebUrl);
+          _this.displayPhoto(photo);
+          if (((new Date()).getTime() - parseInt(photo.timestamp || 0, 10)) > 60000) {
+            return console.log("need reload");
+          }
+        };
+      })(this));
+      this.bookmarksBar = new BookmarksBar();
+      this.bookmarksBar.render(this.$viewport[0]);
+      $("#photo-title-refresh-link").on("click", (function(_this) {
+        return function() {
+          console.log("refresh");
+          return _this.refreshPhoto().then(function(photo) {
+            return _this.displayPhoto(photo);
+          });
+        };
+      })(this));
+    }
+
+    ChromePicturesNewTab.prototype.displayPhoto = function(photo) {
+      this.$photo.css("background-image", "url('" + photo.url + "')");
+      this.$photoTitleLink.text(photo.title);
+      this.$photoTitleLink.attr("href", photo.webUrl);
+      this.$photoTitleOwnerLink.html("&copy; " + photo.ownerName);
+      return this.$photoTitleOwnerLink.attr("href", photo.ownerWebUrl);
+    };
+
+    ChromePicturesNewTab.prototype.refreshPhoto = function() {
+      return this.fetchPhoto().then((function(_this) {
+        return function(photo) {
+          return _this.savePhoto(photo);
+        };
+      })(this)).then((function(_this) {
+        return function() {
+          return _this.cachedPhoto();
+        };
+      })(this));
+    };
+
+    ChromePicturesNewTab.prototype.ensureCachedPhoto = function() {
+      return this.cachedPhoto().then(null, (function(_this) {
+        return function() {
           return _this.fetchPhoto().then(function(photo) {
             return _this.savePhoto(photo);
           });
         };
-      })(this), function() {
-        return this.fetchPhoto().then((function(_this) {
-          return function(photo) {
-            _this.savePhoto(photo);
-            return _this.$photo.css("background-image", "url('" + (photo.getAttribute("url")) + "')");
-          };
-        })(this));
-      });
-    }
+      })(this)).then((function(_this) {
+        return function() {
+          return _this.cachedPhoto();
+        };
+      })(this));
+    };
 
     ChromePicturesNewTab.prototype.cachedPhoto = function() {
       return new RSVP.Promise(function(resolve, reject) {
         var err;
         try {
-          return chrome.storage.local.get(["photoDataUri", "photoUrl", "photoContentType", "photoTitle", "photoWebUrl", "photoOwnerName", "photoOwnerWebUrl"], function(data) {
+          return chrome.storage.local.get(["photoDataUri", "photoUrl", "photoContentType", "photoTitle", "photoWebUrl", "photoOwnerName", "photoOwnerWebUrl", "photoTimestamp", "photoIsPinned"], function(data) {
             var _ref;
             if (((_ref = data.photoDataUri) != null ? _ref.length : void 0) > 0) {
               console.log("Photo cache hit");
@@ -55,7 +90,9 @@
                 title: data.photoTitle,
                 webUrl: data.photoWebUrl,
                 ownerName: data.photoOwnerName,
-                ownerWebUrl: data.photoOwnerWebUrl
+                ownerWebUrl: data.photoOwnerWebUrl,
+                timestamp: data.photoTimestamp,
+                isPinned: data.photoIsPinned
               });
             } else {
               console.warn("Photo cache miss");
@@ -82,7 +119,8 @@
             photoTitle: photo.title,
             photoWebUrl: photo.webUrl,
             photoOwnerName: photo.ownerName,
-            photoOwnerWebUrl: photo.ownerWebUrl
+            photoOwnerWebUrl: photo.ownerWebUrl,
+            photoTimestamp: (new Date()).getTime()
           }, function() {
             console.log("Photo saved");
             return resolve();
@@ -215,6 +253,372 @@
         return img.src = url;
       });
     };
+
+    BookmarksBar = (function() {
+      function BookmarksBar() {
+        this.bookmarksLoaded = new RSVP.Promise((function(_this) {
+          return function(resolve, reject) {
+            return chrome.bookmarks.getChildren("1", function(bookmarks) {
+              _this.bookmarks = bookmarks;
+              return resolve(_this.bookmarks);
+            });
+          };
+        })(this));
+      }
+
+      BookmarksBar.prototype.render = function($viewport) {
+        this.$viewport = $viewport;
+        this.$el = document.createElement("div");
+        this.$el.id = "bookmarks-bar";
+        this.$viewport.appendChild(this.$el);
+        return this.bookmarksLoaded.then((function(_this) {
+          return function() {
+            _this.mainBookmarksList = new BookmarksList(_this.bookmarks, {
+              delegate: _this
+            });
+            _this.mainBookmarksList.render(_this.$el);
+            _this.otherBookmarksList = new BookmarksList([
+              {
+                id: "2",
+                title: "Other Bookmarks"
+              }
+            ], {
+              delegate: _this
+            });
+            _this.otherBookmarksList.render(_this.$el);
+            return _this.otherBookmarksList.$el.className += " other-bookmarks";
+          };
+        })(this));
+      };
+
+      BookmarksBar.prototype.hidePopupIfPresent = function() {
+        this.otherBookmarksList.hidePopupIfPresent();
+        return this.mainBookmarksList.hidePopupIfPresent();
+      };
+
+      BookmarksBar.prototype.BookmarksListDidOpenFolder = function(bookmarksList) {
+        if (bookmarksList === this.mainBookmarksList) {
+          return this.otherBookmarksList.hidePopupIfPresent();
+        } else {
+          return this.mainBookmarksList.hidePopupIfPresent();
+        }
+      };
+
+      BookmarksBar.prototype.BookmarksListDidMouseOverItem = function(bookmarksList, bookmarkItem) {
+        if (bookmarkItem.isFolder()) {
+          if (bookmarksList === this.mainBookmarksList) {
+            return this.otherBookmarksList.hidePopupIfPresent();
+          } else {
+            return this.mainBookmarksList.hidePopupIfPresent();
+          }
+        } else {
+          return this.hidePopupIfPresent();
+        }
+      };
+
+      return BookmarksBar;
+
+    })();
+
+    BookmarksList = (function() {
+      function BookmarksList(bookmarks, options) {
+        this.bookmarks = bookmarks;
+        this.options = options != null ? options : {};
+        this.delegate = this.options.delegate;
+      }
+
+      BookmarksList.prototype.render = function($viewport) {
+        var bookmark, bookmarkItem, _i, _len, _ref;
+        this.$viewport = $viewport;
+        this.$el = document.createElement("ul");
+        this.$el.className = "bookmarks-list clearfix";
+        _ref = this.bookmarks;
+        for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+          bookmark = _ref[_i];
+          bookmarkItem = new BookmarkItem(bookmark);
+          bookmarkItem.delegate = this;
+          bookmarkItem.render(this.$el);
+        }
+        return this.$viewport.appendChild(this.$el);
+      };
+
+      BookmarksList.prototype.hidePopupIfPresent = function() {
+        if (this.popup) {
+          this.popup.hide();
+          return this.popup = null;
+        }
+      };
+
+      BookmarksList.prototype.openFolder = function(bookmarkItem) {
+        var _ref;
+        chrome.bookmarks.getChildren(bookmarkItem.bookmarkId, (function(_this) {
+          return function(bookmarks) {
+            _this.hidePopupIfPresent();
+            _this.popup = new BookmarksPopup(bookmarks, {
+              folderId: bookmarkItem.bookmarkId
+            });
+            return _this.popup.render(bookmarkItem.$link);
+          };
+        })(this));
+        return (_ref = this.delegate) != null ? typeof _ref.BookmarksListDidOpenFolder === "function" ? _ref.BookmarksListDidOpenFolder(this) : void 0 : void 0;
+      };
+
+      BookmarksList.prototype.BookmarkItemDidClick = function(bookmarkItem) {
+        if (bookmarkItem.isFolder()) {
+          return this.openFolder(bookmarkItem);
+        }
+      };
+
+      BookmarksList.prototype.BookmarkItemDidMouseOver = function(bookmarkItem) {
+        var _ref;
+        if (!bookmarkItem.isFolder()) {
+          this.hidePopupIfPresent();
+        }
+        return (_ref = this.delegate) != null ? typeof _ref.BookmarksListDidMouseOverItem === "function" ? _ref.BookmarksListDidMouseOverItem(this, bookmarkItem) : void 0 : void 0;
+      };
+
+      BookmarksList.prototype.BookmarkItemWillClick = function(bookmarkItem) {
+        return this.hidePopupIfPresent();
+      };
+
+      return BookmarksList;
+
+    })();
+
+    BookmarksPopup = (function() {
+      function BookmarksPopup(bookmarks, options, flowtipOptions) {
+        this.bookmarks = bookmarks;
+        this.options = options != null ? options : {};
+        this.flowtipOptions = flowtipOptions != null ? flowtipOptions : {};
+        this.parentPopup = this.options.parentPopup;
+        this.parentRegion = this.options.parentRegion;
+        this.folderId = this.options.folderId;
+      }
+
+      BookmarksPopup.prototype.render = function($target) {
+        var bookmark, bookmarkItem, flowtipOptions, _i, _len, _ref;
+        this.$target = $target;
+        this.$el = document.createElement("ul");
+        this.$el.className = "bookmarks-list";
+        _ref = this.bookmarks;
+        for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+          bookmark = _ref[_i];
+          bookmarkItem = new BookmarkItem(bookmark);
+          bookmarkItem.delegate = this;
+          bookmarkItem.render(this.$el);
+        }
+        flowtipOptions = this.parentPopup ? {
+          region: this.parentRegion || "right",
+          topDisabled: true,
+          leftDisabled: false,
+          rightDisabled: false,
+          bottomDisabled: true,
+          rootAlign: "edge",
+          leftRootAlignOffset: 0,
+          rightRootAlignOffset: -0.1,
+          targetAlign: "edge",
+          leftTargetAlignOffset: 0,
+          rightTargetAlignOffset: -0.1
+        } : {
+          region: "bottom",
+          topDisabled: true,
+          leftDisabled: true,
+          rightDisabled: true,
+          bottomDisabled: false,
+          rootAlign: "edge",
+          rootAlignOffset: 0,
+          targetAlign: "edge",
+          targetAlignOffset: 0
+        };
+        this.flowtip = new FlowTip(_.extend({
+          className: "bookmarks-popup",
+          hasTail: false,
+          rotationOffset: 0,
+          edgeOffset: 10,
+          targetOffset: 2,
+          maxHeight: "" + (this.maxHeight()) + "px"
+        }, flowtipOptions, this.flowtipOptions));
+        this.flowtip.setTooltipContent(this.$el);
+        this.flowtip.setTarget(this.$target);
+        this.flowtip.show();
+        return this.flowtip.content.addEventListener("scroll", (function(_this) {
+          return function() {
+            return _this.hidePopupIfPresent();
+          };
+        })(this), false);
+      };
+
+      BookmarksPopup.prototype.hide = function() {
+        this.hidePopupIfPresent();
+        this.flowtip.hide();
+        return this.flowtip.destroy();
+      };
+
+      BookmarksPopup.prototype.hidePopupIfPresent = function() {
+        if (this.popup) {
+          this.popup.hide();
+          return this.popup = null;
+        }
+      };
+
+      BookmarksPopup.prototype.openFolder = function(bookmarkItem) {
+        return chrome.bookmarks.getChildren(bookmarkItem.bookmarkId, (function(_this) {
+          return function(bookmarks) {
+            _this.hidePopupIfPresent();
+            _this.popup = new BookmarksPopup(bookmarks, {
+              parentPopup: _this,
+              parentRegion: _this.parentPopup ? _this.flowtip._region : void 0,
+              folderId: bookmarkItem.bookmarkId
+            });
+            return _this.popup.render(bookmarkItem.$link);
+          };
+        })(this));
+      };
+
+      BookmarksPopup.prototype.maxHeight = function() {
+        if (this.parentPopup) {
+          return document.body.clientHeight - 20;
+        } else {
+          return document.body.clientHeight - 41;
+        }
+      };
+
+      BookmarksPopup.prototype.BookmarkItemDidMouseOver = function(bookmarkItem) {
+        var _ref;
+        if (bookmarkItem.isFolder()) {
+          if (this.popup) {
+            if (this.popup.folderId !== bookmarkItem.bookmarkId) {
+              this.hidePopupIfPresent();
+            }
+          } else {
+            this.openFolder(bookmarkItem);
+          }
+        } else {
+          this.hidePopupIfPresent();
+        }
+        return (_ref = this.parentPopup) != null ? typeof _ref.BookmarksPopupDidMouseOverItem === "function" ? _ref.BookmarksPopupDidMouseOverItem(bookmarkItem) : void 0 : void 0;
+      };
+
+      BookmarksPopup.prototype.BookmarkItemDidMouseOut = function(bookmarkItem) {
+        if (bookmarkItem.isFolder()) {
+          if (!this.mouseoutTimeout) {
+            return this.mouseoutTimeout = _.delay((function(_this) {
+              return function() {
+                _this.hidePopupIfPresent();
+                return _this.mouseoutTimeout = null;
+              };
+            })(this), 100);
+          }
+        }
+      };
+
+      BookmarksPopup.prototype.BookmarkItemWillClick = function(bookmarkItem) {
+        if (this.popup && this.popup.folderId !== bookmarkItem.bookmarkId) {
+          return this.hidePopupIfPresent();
+        }
+      };
+
+      BookmarksPopup.prototype.BookmarkItemDidClick = function(bookmarkItem) {
+        var _ref;
+        return (_ref = this.parentPopup) != null ? typeof _ref.BookmarksPopupDidClickItem === "function" ? _ref.BookmarksPopupDidClickItem(bookmarkItem) : void 0 : void 0;
+      };
+
+      BookmarksPopup.prototype.BookmarksPopupDidMouseOverItem = function(bookmarkItem) {
+        if (this.mouseoutTimeout) {
+          clearTimeout(this.mouseoutTimeout);
+          return this.mouseoutTimeout = null;
+        }
+      };
+
+      BookmarksPopup.prototype.BookmarksPopupDidClickItem = function(bookmarkItem) {
+        if (this.parentPopup) {
+          return this.hidePopupIfPresent();
+        } else {
+          return this.hide();
+        }
+      };
+
+      return BookmarksPopup;
+
+    })();
+
+    BookmarkItem = (function() {
+      function BookmarkItem(bookmark) {
+        this.bookmark = bookmark;
+        this.bookmarkId = this.bookmark.id;
+      }
+
+      BookmarkItem.prototype.render = function($viewport) {
+        var $label, $link;
+        this.$viewport = $viewport;
+        this.$el = document.createElement("li");
+        this.$el.className = "bookmark-item";
+        if (!this.bookmark.url) {
+          this.$el.className += " folder-item";
+        }
+        $link = document.createElement("a");
+        $label = document.createElement("span");
+        $link.className = "clearfix";
+        if (!this.isFolder()) {
+          $link.setAttribute("href", this.bookmark.url);
+        }
+        $link.addEventListener("mouseover", (function(_this) {
+          return function() {
+            if (_this.mouseoutTimeout) {
+              clearTimeout(_this.mouseoutTimeout);
+              return _this.mouseoutTimeout = null;
+            } else {
+              return _.delay(function() {
+                var _ref;
+                return (_ref = _this.delegate) != null ? typeof _ref.BookmarkItemDidMouseOver === "function" ? _ref.BookmarkItemDidMouseOver(_this) : void 0 : void 0;
+              }, 110);
+            }
+          };
+        })(this), false);
+        $link.addEventListener("mouseout", (function(_this) {
+          return function() {
+            if (!_this.mouseoutTimeout) {
+              return _this.mouseoutTimeout = _.delay(function() {
+                var _ref;
+                if ((_ref = _this.delegate) != null) {
+                  if (typeof _ref.BookmarkItemDidMouseOut === "function") {
+                    _ref.BookmarkItemDidMouseOut(_this);
+                  }
+                }
+                return _this.mouseoutTimeout = null;
+              }, 100);
+            }
+          };
+        })(this), false);
+        $link.addEventListener("mousedown", (function(_this) {
+          return function() {
+            var _ref;
+            return (_ref = _this.delegate) != null ? typeof _ref.BookmarkItemWillClick === "function" ? _ref.BookmarkItemWillClick(_this) : void 0 : void 0;
+          };
+        })(this), false);
+        $link.addEventListener("click", (function(_this) {
+          return function() {
+            var _ref;
+            return (_ref = _this.delegate) != null ? typeof _ref.BookmarkItemDidClick === "function" ? _ref.BookmarkItemDidClick(_this) : void 0 : void 0;
+          };
+        })(this), false);
+        $label.innerHTML = this.bookmark.title.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+        if (this.isFolder()) {
+          $label.innerHTML += " &raquo;";
+        }
+        $link.appendChild($label);
+        this.$el.appendChild($link);
+        this.$link = $link;
+        return this.$viewport.appendChild(this.$el);
+      };
+
+      BookmarkItem.prototype.isFolder = function() {
+        return !this.bookmark.url;
+      };
+
+      return BookmarkItem;
+
+    })();
 
     return ChromePicturesNewTab;
 
