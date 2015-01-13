@@ -268,7 +268,7 @@ class ChromePicturesNewTab
 
         ctx.drawImage(img, 0, 0)
         topData = ctx.getImageData(0, 0, img.width, 20)
-        bottomData = ctx.getImageData(0, img.height - 16, img.width, img.height)
+        bottomData = ctx.getImageData(0, img.height - 16, img.width, 16)
 
         resolve({
           dataUri: canvas.toDataURL(contentType)
