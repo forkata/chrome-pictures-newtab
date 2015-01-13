@@ -94,7 +94,7 @@
     };
 
     ChromePicturesNewTab.prototype.advancePhoto = function() {
-      return this.cachedPhoto("next").then((function(_this) {
+      return this.ensureCachedPhoto("next").then((function(_this) {
         return function(photo) {
           return _this.savePhoto(photo, "current").then(function() {
             _this.displayPhoto(photo);

@@ -77,7 +77,7 @@ class ChromePicturesNewTab
     null
 
   advancePhoto: ->
-    @cachedPhoto("next").then (photo) =>
+    @ensureCachedPhoto("next").then (photo) =>
       @savePhoto(photo, "current").then =>
         @displayPhoto(photo)
         @deleteCachedPhoto("next").then =>
