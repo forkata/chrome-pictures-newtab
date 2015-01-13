@@ -20,7 +20,11 @@ class ChromePicturesNewTab
     , false
 
     @ensureCachedPhoto("current").then (photo) =>
-      timedOut = ((new Date()).getTime() -  (parseInt(photo.timestamp, 10) || Infinity)) > 900000
+      nowTime = (new Date()).getTime()
+      photoTime = parseInt(photo.timestamp) || Infinity
+      diffTime = nowTime - photoTime
+      timedOut = diffTime > 900000
+
       if timedOut && !photo.isPinned
         @advancePhoto()
       else
@@ -52,8 +56,11 @@ class ChromePicturesNewTab
     console.log "Displaying photo", photo
 
     chrome.storage.local.get ["current-photo-timestamp"], (data) ->
+      console.log "Checking photo timestamp", data
       if !data["current-photo-timestamp"]
-        data["current-photo-timestamp"] = (new Date()).getTime()
+        photoTime = (new Date()).getTime()
+        console.log "Setting photo timestamp to #{photoTime}"
+        data["current-photo-timestamp"] = photoTime
         chrome.storage.local.set data
 
     # @$photo.css "background-image", "url('#{photo.url}')"
@@ -83,6 +90,7 @@ class ChromePicturesNewTab
 
   advancePhoto: ->
     @ensureCachedPhoto("next").then (photo) =>
+      photo.timestamp = null
       @savePhoto(photo, "current").then =>
         @displayPhoto(photo)
         @deleteCachedPhoto("next").then =>
@@ -221,6 +229,7 @@ class ChromePicturesNewTab
               webUrl: webUrl
               ownerName: ownerName
               ownerWebUrl: ownerWebUrl
+              timestamp: null
               isPinned: false
             })
       .catch ->

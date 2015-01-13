@@ -27,8 +27,12 @@
       })(this), false);
       this.ensureCachedPhoto("current").then((function(_this) {
         return function(photo) {
-          var timedOut;
-          timedOut = ((new Date()).getTime() - (parseInt(photo.timestamp, 10) || Infinity)) > 900000;
+          var diffTime, nowTime, photoTime, timedOut;
+          nowTime = (new Date()).getTime();
+          photoTime = parseInt(photo.timestamp) || Infinity;
+          diffTime = nowTime - photoTime;
+          timedOut = diffTime > 900000;
+          console.log(nowTime, photoTime, diffTime, timedOut);
           if (timedOut && !photo.isPinned) {
             return _this.advancePhoto();
           } else {
@@ -71,12 +75,16 @@
     ChromePicturesNewTab.prototype.displayPhoto = function(photo) {
       console.log("Displaying photo", photo);
       chrome.storage.local.get(["current-photo-timestamp"], function(data) {
+        var photoTime;
+        console.log("Checking photo timestamp", data);
         if (!data["current-photo-timestamp"]) {
-          data["current-photo-timestamp"] = (new Date()).getTime();
+          photoTime = (new Date()).getTime();
+          console.log("Setting photo timestamp to " + photoTime);
+          data["current-photo-timestamp"] = photoTime;
           return chrome.storage.local.set(data);
         }
       });
-      this.$photo.css("background-image", "url(" + photo.dataUri + ")");
+      this.$photo.css("background-image", "url('" + photo.url + "')");
       this.$photoTitleLink.text(photo.title);
       this.$photoTitleLink.attr("href", photo.webUrl);
       this.$photoTitleOwnerLink.html("&copy; " + photo.ownerName);
@@ -102,6 +110,7 @@
     ChromePicturesNewTab.prototype.advancePhoto = function() {
       return this.ensureCachedPhoto("next").then((function(_this) {
         return function(photo) {
+          photo.timestamp = null;
           return _this.savePhoto(photo, "current").then(function() {
             _this.displayPhoto(photo);
             return _this.deleteCachedPhoto("next").then(function() {
@@ -270,6 +279,7 @@
                   webUrl: webUrl,
                   ownerName: ownerName,
                   ownerWebUrl: ownerWebUrl,
+                  timestamp: null,
                   isPinned: false
                 });
               });
