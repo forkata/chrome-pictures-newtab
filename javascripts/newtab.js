@@ -26,7 +26,7 @@
         return function(photo) {
           var timedOut;
           _this.displayPhoto(photo);
-          timedOut = ((new Date()).getTime() - parseInt(photo.timestamp || 0, 10)) > 60000;
+          timedOut = ((new Date()).getTime() - parseInt(photo.timestamp || 0, 10)) > 900000;
           if (timedOut && !photo.isPinned) {
             return _this.refreshPhoto();
           }
