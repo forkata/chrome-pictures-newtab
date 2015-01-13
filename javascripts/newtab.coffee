@@ -1,5 +1,6 @@
 class ChromePicturesNewTab
-  @FetchSize: 500
+  fetchSize: 500
+  attrRegexp: new RegExp("^[^-]+-photo-(.+)")
 
   constructor: ($viewport) ->
     @$viewport = $viewport
@@ -33,7 +34,9 @@ class ChromePicturesNewTab
         @displayPhoto(photo)
 
     @$photoPinLink.on "click", =>
-      chrome.storage.local.set { photoIsPinned: true }, =>
+      data = {}
+      data["current-photo-isPinned"] = true
+      chrome.storage.local.set data, =>
         @$photoPinLink.text("Pinned")
 
     document.body.addEventListener "click", (event) =>
@@ -61,44 +64,35 @@ class ChromePicturesNewTab
 
   refreshPhoto: ->
     @fetchPhoto().then((photo) =>
-      @savePhoto(photo)
+      @savePhoto(photo, "current")
     ).then =>
-      @cachedPhoto()
+      @cachedPhoto("current")
 
   ensureCachedPhoto: ->
-    @cachedPhoto().then(null, =>
+    @cachedPhoto("current").then(null, =>
       @fetchPhoto().then (photo) =>
-        @savePhoto(photo)
+        @savePhoto(photo, "current")
     ).then =>
-      @cachedPhoto()
+      @cachedPhoto("current")
 
-  cachedPhoto: ->
-    new RSVP.Promise (resolve, reject) ->
+  cachedPhoto: (prefix) ->
+    new RSVP.Promise (resolve, reject) =>
       try
         chrome.storage.local.get [
-          "photoDataUri"
-          "photoUrl"
-          "photoContentType"
-          "photoTitle"
-          "photoWebUrl"
-          "photoOwnerName"
-          "photoOwnerWebUrl"
-          "photoTimestamp"
-          "photoIsPinned"
-        ], (data) ->
-          if data.photoDataUri?.length > 0
+          "#{prefix}-photo-dataUri"
+          "#{prefix}-photo-url"
+          "#{prefix}-photo-contentType"
+          "#{prefix}-photo-title"
+          "#{prefix}-photo-webUrl"
+          "#{prefix}-photo-ownerName"
+          "#{prefix}-photo-ownerWebUrl"
+          "#{prefix}-photo-timestamp"
+          "#{prefix}-photo-isPinned"
+        ], (data) =>
+          photo = @decodePhoto(data)
+          if photo.dataUri?.length > 0
             console.log "Photo cache hit"
-            resolve({
-              dataUri: data.photoDataUri
-              url: data.photoUrl
-              contentType: data.photoContentType
-              title: data.photoTitle
-              webUrl: data.photoWebUrl
-              ownerName: data.photoOwnerName
-              ownerWebUrl: data.photoOwnerWebUrl
-              timestamp: data.photoTimestamp
-              isPinned: data.photoIsPinned
-            })
+            resolve(photo)
           else
             console.warn "Photo cache miss"
             reject()
@@ -106,27 +100,30 @@ class ChromePicturesNewTab
         console.error "Photo cache error"
         reject(err)
 
-  savePhoto: (photo) ->
-    console.log "saving", photo
-    new RSVP.Promise (resolve, reject) ->
+  savePhoto: (photo, prefix) ->
+    new RSVP.Promise (resolve, reject) =>
       try
-        chrome.storage.local.set({
-          photoDataUri: photo.dataUri
-          photoUrl: photo.url
-          photoContentType: photo.contentType
-          photoTitle: photo.title
-          photoWebUrl: photo.webUrl
-          photoOwnerName: photo.ownerName
-          photoOwnerWebUrl: photo.ownerWebUrl
-          photoTimestamp: (new Date()).getTime()
-          photoIsPinned: false
-        }, ->
-          console.log "Photo saved"
+        data = @encodePhoto(photo, prefix)
+        chrome.storage.local.set(data, ->
+          console.log "Photo saved with prefix: #{prefix}"
           resolve()
         )
       catch err
         console.error "Error saving photo", err
         reject(err)
+
+  decodePhoto: (data) ->
+    photo = {}
+    _.each _.keys(data), (key) =>
+      attrName = key.match(@attrRegexp)[1]
+      photo[attrName] = data[key]
+    photo
+
+  encodePhoto: (photo, prefix) ->
+    data = {}
+    _.each _.keys(photo), (attr) =>
+      data["#{prefix}-photo-#{attr}"] = photo[attr]
+    data
 
   fetchPhoto: ->
     new RSVP.Promise (resolve, reject) =>
@@ -175,6 +172,8 @@ class ChromePicturesNewTab
               webUrl: webUrl
               ownerName: ownerName
               ownerWebUrl: ownerWebUrl
+              timestamp: (new Date()).getTime()
+              isPinned: false
             })
       .catch ->
         console.error "Error fetching photo", arguments
@@ -182,7 +181,7 @@ class ChromePicturesNewTab
 
   fetchPhotos: ->
     @flickrApiRequest("flickr.photos.search", {
-      per_page: ChromePicturesNewTab.FetchSize
+      per_page: @fetchSize
       page: 1
 
       content_type: "1"

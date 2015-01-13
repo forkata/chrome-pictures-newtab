@@ -5,7 +5,9 @@
   ChromePicturesNewTab = (function() {
     var BookmarkItem, BookmarksBar, BookmarksList, BookmarksPopup;
 
-    ChromePicturesNewTab.FetchSize = 500;
+    ChromePicturesNewTab.prototype.fetchSize = 500;
+
+    ChromePicturesNewTab.prototype.attrRegexp = new RegExp("^[^-]+-photo-(.+)");
 
     function ChromePicturesNewTab($viewport) {
       this.$viewport = $viewport;
@@ -80,86 +82,95 @@
     ChromePicturesNewTab.prototype.refreshPhoto = function() {
       return this.fetchPhoto().then((function(_this) {
         return function(photo) {
-          return _this.savePhoto(photo);
+          return _this.savePhoto(photo, "current");
         };
       })(this)).then((function(_this) {
         return function() {
-          return _this.cachedPhoto();
+          return _this.cachedPhoto("current");
         };
       })(this));
     };
 
     ChromePicturesNewTab.prototype.ensureCachedPhoto = function() {
-      return this.cachedPhoto().then(null, (function(_this) {
+      return this.cachedPhoto("current").then(null, (function(_this) {
         return function() {
           return _this.fetchPhoto().then(function(photo) {
-            return _this.savePhoto(photo);
+            return _this.savePhoto(photo, "current");
           });
         };
       })(this)).then((function(_this) {
         return function() {
-          return _this.cachedPhoto();
+          return _this.cachedPhoto("current");
         };
       })(this));
     };
 
-    ChromePicturesNewTab.prototype.cachedPhoto = function() {
-      return new RSVP.Promise(function(resolve, reject) {
-        var err;
-        try {
-          return chrome.storage.local.get(["photoDataUri", "photoUrl", "photoContentType", "photoTitle", "photoWebUrl", "photoOwnerName", "photoOwnerWebUrl", "photoTimestamp", "photoIsPinned"], function(data) {
-            var _ref;
-            if (((_ref = data.photoDataUri) != null ? _ref.length : void 0) > 0) {
-              console.log("Photo cache hit");
-              return resolve({
-                dataUri: data.photoDataUri,
-                url: data.photoUrl,
-                contentType: data.photoContentType,
-                title: data.photoTitle,
-                webUrl: data.photoWebUrl,
-                ownerName: data.photoOwnerName,
-                ownerWebUrl: data.photoOwnerWebUrl,
-                timestamp: data.photoTimestamp,
-                isPinned: data.photoIsPinned
-              });
-            } else {
-              console.warn("Photo cache miss");
-              return reject();
-            }
-          });
-        } catch (_error) {
-          err = _error;
-          console.error("Photo cache error");
-          return reject(err);
-        }
-      });
+    ChromePicturesNewTab.prototype.cachedPhoto = function(prefix) {
+      return new RSVP.Promise((function(_this) {
+        return function(resolve, reject) {
+          var err;
+          try {
+            return chrome.storage.local.get(["" + prefix + "-photo-dataUri", "" + prefix + "-photo-url", "" + prefix + "-photo-contentType", "" + prefix + "-photo-title", "" + prefix + "-photo-webUrl", "" + prefix + "-photo-ownerName", "" + prefix + "-photo-ownerWebUrl", "" + prefix + "-photo-timestamp", "" + prefix + "-photo-isPinned"], function(data) {
+              var photo, _ref;
+              photo = _this.decodePhoto(data);
+              if (((_ref = photo.dataUri) != null ? _ref.length : void 0) > 0) {
+                console.log("Photo cache hit");
+                return resolve(photo);
+              } else {
+                console.warn("Photo cache miss");
+                return reject();
+              }
+            });
+          } catch (_error) {
+            err = _error;
+            console.error("Photo cache error");
+            return reject(err);
+          }
+        };
+      })(this));
     };
 
-    ChromePicturesNewTab.prototype.savePhoto = function(photo) {
-      console.log("saving", photo);
-      return new RSVP.Promise(function(resolve, reject) {
-        var err;
-        try {
-          return chrome.storage.local.set({
-            photoDataUri: photo.dataUri,
-            photoUrl: photo.url,
-            photoContentType: photo.contentType,
-            photoTitle: photo.title,
-            photoWebUrl: photo.webUrl,
-            photoOwnerName: photo.ownerName,
-            photoOwnerWebUrl: photo.ownerWebUrl,
-            photoTimestamp: (new Date()).getTime(),
-            photoIsPinned: false
-          }, function() {
-            console.log("Photo saved");
-            return resolve();
-          });
-        } catch (_error) {
-          err = _error;
-          console.error("Error saving photo", err);
-          return reject(err);
-        }
-      });
+    ChromePicturesNewTab.prototype.savePhoto = function(photo, prefix) {
+      return new RSVP.Promise((function(_this) {
+        return function(resolve, reject) {
+          var data, err;
+          try {
+            data = _this.encodePhoto(photo, prefix);
+            return chrome.storage.local.set(data, function() {
+              console.log("Photo saved with prefix: " + prefix);
+              return resolve();
+            });
+          } catch (_error) {
+            err = _error;
+            console.error("Error saving photo", err);
+            return reject(err);
+          }
+        };
+      })(this));
+    };
+
+    ChromePicturesNewTab.prototype.decodePhoto = function(data) {
+      var photo;
+      photo = {};
+      _.each(_.keys(data), (function(_this) {
+        return function(key) {
+          var attrName;
+          attrName = key.match(_this.attrRegexp)[1];
+          return photo[attrName] = data[key];
+        };
+      })(this));
+      return photo;
+    };
+
+    ChromePicturesNewTab.prototype.encodePhoto = function(photo, prefix) {
+      var data;
+      data = {};
+      _.each(_.keys(photo), (function(_this) {
+        return function(attr) {
+          return data["" + prefix + "-photo-" + attr] = photo[attr];
+        };
+      })(this));
+      return data;
     };
 
     ChromePicturesNewTab.prototype.fetchPhoto = function() {
@@ -210,7 +221,9 @@
                   title: title,
                   webUrl: webUrl,
                   ownerName: ownerName,
-                  ownerWebUrl: ownerWebUrl
+                  ownerWebUrl: ownerWebUrl,
+                  timestamp: (new Date()).getTime(),
+                  isPinned: false
                 });
               });
             });
@@ -224,7 +237,7 @@
 
     ChromePicturesNewTab.prototype.fetchPhotos = function() {
       return this.flickrApiRequest("flickr.photos.search", {
-        per_page: ChromePicturesNewTab.FetchSize,
+        per_page: this.fetchSize,
         page: 1,
         content_type: "1",
         media: "photos",
