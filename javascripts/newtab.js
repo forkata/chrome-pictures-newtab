@@ -70,7 +70,7 @@
 
     ChromePicturesNewTab.prototype.displayPhoto = function(photo) {
       console.log("Displaying photo", photo);
-      this.$photo.css("background-image", "url('" + photo.url + "')");
+      this.$photo.css("background-image", "url(" + photo.dataUri + ")");
       this.$photoTitleLink.text(photo.title);
       this.$photoTitleLink.attr("href", photo.webUrl);
       this.$photoTitleOwnerLink.html("&copy; " + photo.ownerName);

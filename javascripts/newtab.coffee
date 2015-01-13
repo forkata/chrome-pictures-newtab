@@ -51,8 +51,8 @@ class ChromePicturesNewTab
   displayPhoto: (photo) ->
     console.log "Displaying photo", photo
 
-    @$photo.css "background-image", "url('#{photo.url}')"
-    # @$photo.css "background-image", "url(#{photo.dataUri})"
+    # @$photo.css "background-image", "url('#{photo.url}')"
+    @$photo.css "background-image", "url(#{photo.dataUri})"
 
     @$photoTitleLink.text(photo.title)
     @$photoTitleLink.attr("href", photo.webUrl)
