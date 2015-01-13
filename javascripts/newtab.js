@@ -12,6 +12,7 @@
     function ChromePicturesNewTab($viewport) {
       this.$viewport = $viewport;
       this.$photo = $("#photo");
+      this.$photoFooter = $("#photo-footer");
       this.$photoTitleLink = $("#photo-title-link");
       this.$photoTitleOwnerLink = $("#photo-title-owner-link");
       this.$photoRefreshLink = $("#photo-refresh-link");
@@ -68,11 +69,22 @@
     }
 
     ChromePicturesNewTab.prototype.displayPhoto = function(photo) {
+      console.log("Displaying photo", photo);
       this.$photo.css("background-image", "url('" + photo.url + "')");
       this.$photoTitleLink.text(photo.title);
       this.$photoTitleLink.attr("href", photo.webUrl);
       this.$photoTitleOwnerLink.html("&copy; " + photo.ownerName);
       this.$photoTitleOwnerLink.attr("href", photo.ownerWebUrl);
+      if ((photo.bottomGrayscale / 255.0) * 100 < 50) {
+        this.$photoFooter.attr("data-color", "dark");
+      } else {
+        this.$photoFooter.attr("data-color", "light");
+      }
+      if ((photo.topGrayscale / 255.0) * 100 < 50) {
+        $(this.bookmarksBar.$el).attr("data-color", "dark");
+      } else {
+        $(this.bookmarksBar.$el).attr("data-color", "light");
+      }
       if (photo.isPinned) {
         this.$photoPinLink.text("Pinned");
       } else {
@@ -120,7 +132,7 @@
         return function(resolve, reject) {
           var err;
           try {
-            return chrome.storage.local.get(["" + prefix + "-photo-dataUri", "" + prefix + "-photo-url", "" + prefix + "-photo-contentType", "" + prefix + "-photo-title", "" + prefix + "-photo-webUrl", "" + prefix + "-photo-ownerName", "" + prefix + "-photo-ownerWebUrl", "" + prefix + "-photo-timestamp", "" + prefix + "-photo-isPinned"], function(data) {
+            return chrome.storage.local.get(["" + prefix + "-photo-dataUri", "" + prefix + "-photo-topGrayscale", "" + prefix + "-photo-bottomGrayscale", "" + prefix + "-photo-url", "" + prefix + "-photo-contentType", "" + prefix + "-photo-title", "" + prefix + "-photo-webUrl", "" + prefix + "-photo-ownerName", "" + prefix + "-photo-ownerWebUrl", "" + prefix + "-photo-timestamp", "" + prefix + "-photo-isPinned"], function(data) {
               var photo, _ref;
               photo = _this.decodePhoto(data);
               if (((_ref = photo.dataUri) != null ? _ref.length : void 0) > 0) {
@@ -164,7 +176,7 @@
         return function(resolve, reject) {
           var err;
           try {
-            return chrome.storage.local.remove(["" + prefix + "-photo-dataUri", "" + prefix + "-photo-url", "" + prefix + "-photo-contentType", "" + prefix + "-photo-title", "" + prefix + "-photo-webUrl", "" + prefix + "-photo-ownerName", "" + prefix + "-photo-ownerWebUrl", "" + prefix + "-photo-timestamp", "" + prefix + "-photo-isPinned"], function() {
+            return chrome.storage.local.remove(["" + prefix + "-photo-dataUri", "" + prefix + "-photo-topGrayscale", "" + prefix + "-photo-bottomGrayscale", "" + prefix + "-photo-url", "" + prefix + "-photo-contentType", "" + prefix + "-photo-title", "" + prefix + "-photo-webUrl", "" + prefix + "-photo-ownerName", "" + prefix + "-photo-ownerWebUrl", "" + prefix + "-photo-timestamp", "" + prefix + "-photo-isPinned"], function() {
               console.log("Photo deleted with prefix: " + prefix);
               return resolve();
             });
@@ -241,9 +253,11 @@
               contentType = "image/" + (url.match(/\.([^.]+)$/)[1]);
               photo.setAttribute("url", url);
               photo.setAttribute("content-type", contentType);
-              return _this.urlToBase64(url, contentType).then(function(dataUri) {
+              return _this.urlToImageData(url, contentType).then(function(imageData) {
                 return resolve({
-                  dataUri: dataUri,
+                  dataUri: imageData.dataUri,
+                  topGrayscale: imageData.topGrayscale,
+                  bottomGrayscale: imageData.bottomGrayscale,
                   url: url,
                   contentType: contentType,
                   title: title,
@@ -307,24 +321,61 @@
       return "https://www.flickr.com/photos/" + userId;
     };
 
-    ChromePicturesNewTab.prototype.urlToBase64 = function(url, contentType) {
-      return new RSVP.Promise(function(resolve) {
-        var canvas, ctx, img;
-        canvas = document.createElement('CANVAS');
-        ctx = canvas.getContext('2d');
-        img = new Image();
-        img.crossOrigin = 'Anonymous';
-        img.onload = function() {
-          var dataURL;
-          canvas.height = img.height;
-          canvas.width = img.width;
-          ctx.drawImage(img, 0, 0);
-          dataURL = canvas.toDataURL(contentType);
-          resolve(dataURL);
-          return $(canvas).remove();
+    ChromePicturesNewTab.prototype.urlToImageData = function(url, contentType) {
+      return new RSVP.Promise((function(_this) {
+        return function(resolve) {
+          var canvas, ctx, img;
+          canvas = document.createElement('CANVAS');
+          ctx = canvas.getContext('2d');
+          img = new Image();
+          img.crossOrigin = 'Anonymous';
+          img.onload = function() {
+            var bottomData, topData;
+            canvas.height = img.height;
+            canvas.width = img.width;
+            ctx.drawImage(img, 0, 0);
+            topData = ctx.getImageData(0, 0, img.width, 20);
+            bottomData = ctx.getImageData(0, img.height - 16, img.width, img.height);
+            resolve({
+              dataUri: canvas.toDataURL(contentType),
+              topGrayscale: _this.rgbToGrayscale(_this.averageRgb(topData)),
+              bottomGrayscale: _this.rgbToGrayscale(_this.averageRgb(bottomData))
+            });
+            return $(canvas).remove();
+          };
+          return img.src = url;
         };
-        return img.src = url;
-      });
+      })(this));
+    };
+
+    ChromePicturesNewTab.prototype.averageRgb = function(data) {
+      var count, index, rgb;
+      count = 0;
+      index = 0;
+      rgb = {
+        r: 0,
+        g: 0,
+        b: 0
+      };
+      while (true) {
+        if (index >= data.data.length) {
+          break;
+        }
+        rgb.r += data.data[index];
+        rgb.g += data.data[index + 1];
+        rgb.b += data.data[index + 2];
+        index += 5 * 4;
+        count += 1;
+      }
+      rgb.r = Math.floor(rgb.r / count);
+      rgb.g = Math.floor(rgb.g / count);
+      rgb.b = Math.floor(rgb.b / count);
+      return rgb;
+    };
+
+    ChromePicturesNewTab.prototype.rgbToGrayscale = function(rgb) {
+      console.log(rgb);
+      return (0.21 * rgb.r) + (0.72 * rgb.g) + (0.07 * rgb.b);
     };
 
     BookmarksBar = (function() {

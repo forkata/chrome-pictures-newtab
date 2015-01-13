@@ -26,17 +26,25 @@ body {
   color: white;
   font-size: 10px;
   font-family: sans-serif;
-  background-color: black;
   height: 16px;
   width: 100%;
 }
 
 #photo-footer > a {
-  color: white;
   text-decoration: none;
   line-height: 16px;
-  opacity: 0.6;
+  opacity: 0.9;
   cursor: pointer;
+}
+
+#photo-footer[data-color=dark] > a {
+  color: white;
+  text-shadow: 0px 0px 5px rgba(0, 0, 0, 1);
+}
+
+#photo-footer[data-color=light] > a {
+  color: black;
+  text-shadow: 0px 0px 5px rgba(255, 255, 255, 1);
 }
 
 #photo-footer > a:hover {
@@ -73,7 +81,7 @@ body {
   color: inherit;
   font-family: Arial, sans-serif;
   text-decoration: none;
-  opacity: 0.6;
+  opacity: 0.9;
 }
 
 .bookmark-item a:hover {
@@ -108,7 +116,6 @@ body {
   height: 20px;
   font-size: 12px;
   overflow: hidden;
-  background-color: black;
 }
 
 #bookmarks-bar .bookmark-item {
@@ -131,7 +138,16 @@ body {
   right: 0px;
   padding-left: 0px;
   padding-right: 10px;
-  background-color: black;
+}
+
+#bookmarks-bar[data-color=dark] .bookmark-item a span {
+  color: white;
+  text-shadow: 0px 0px 5px rgba(0, 0, 0, 1);
+}
+
+#bookmarks-bar[data-color=light] .bookmark-item a span {
+  color: black;
+  text-shadow: 0px 0px 5px rgba(255, 255, 255, 1);
 }
 
 /* Bookmarks Popup */

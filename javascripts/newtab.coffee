@@ -6,6 +6,7 @@ class ChromePicturesNewTab
     @$viewport = $viewport
 
     @$photo = $("#photo")
+    @$photoFooter = $("#photo-footer")
     @$photoTitleLink = $("#photo-title-link")
     @$photoTitleOwnerLink = $("#photo-title-owner-link")
     @$photoRefreshLink = $("#photo-refresh-link")
@@ -48,6 +49,8 @@ class ChromePicturesNewTab
     , false
 
   displayPhoto: (photo) ->
+    console.log "Displaying photo", photo
+
     @$photo.css "background-image", "url('#{photo.url}')"
     # @$photo.css "background-image", "url(#{photo.dataUri})"
 
@@ -55,6 +58,16 @@ class ChromePicturesNewTab
     @$photoTitleLink.attr("href", photo.webUrl)
     @$photoTitleOwnerLink.html("&copy; #{photo.ownerName}")
     @$photoTitleOwnerLink.attr("href", photo.ownerWebUrl)
+
+    if (photo.bottomGrayscale / 255.0) * 100 < 50
+      @$photoFooter.attr("data-color", "dark")
+    else
+      @$photoFooter.attr("data-color", "light")
+
+    if (photo.topGrayscale / 255.0) * 100 < 50
+      $(@bookmarksBar.$el).attr("data-color", "dark")
+    else
+      $(@bookmarksBar.$el).attr("data-color", "light")
 
     if photo.isPinned
       @$photoPinLink.text("Pinned")
@@ -86,6 +99,8 @@ class ChromePicturesNewTab
       try
         chrome.storage.local.get [
           "#{prefix}-photo-dataUri"
+          "#{prefix}-photo-topGrayscale"
+          "#{prefix}-photo-bottomGrayscale"
           "#{prefix}-photo-url"
           "#{prefix}-photo-contentType"
           "#{prefix}-photo-title"
@@ -122,6 +137,8 @@ class ChromePicturesNewTab
       try
         chrome.storage.local.remove [
           "#{prefix}-photo-dataUri"
+          "#{prefix}-photo-topGrayscale"
+          "#{prefix}-photo-bottomGrayscale"
           "#{prefix}-photo-url"
           "#{prefix}-photo-contentType"
           "#{prefix}-photo-title"
@@ -188,9 +205,11 @@ class ChromePicturesNewTab
           photo.setAttribute "url", url
           photo.setAttribute "content-type", contentType
 
-          @urlToBase64(url, contentType).then (dataUri) =>
+          @urlToImageData(url, contentType).then (imageData) =>
             resolve({
-              dataUri: dataUri
+              dataUri: imageData.dataUri
+              topGrayscale: imageData.topGrayscale
+              bottomGrayscale: imageData.bottomGrayscale
               url: url
               contentType: contentType
               title: title
@@ -244,21 +263,51 @@ class ChromePicturesNewTab
   ownerWebUrl: (userId) ->
     "https://www.flickr.com/photos/#{userId}"
 
-  urlToBase64: (url, contentType) ->
-    new RSVP.Promise (resolve) ->
+  urlToImageData: (url, contentType) ->
+    new RSVP.Promise (resolve) =>
       canvas = document.createElement('CANVAS')
       ctx = canvas.getContext('2d')
       img = new Image()
       img.crossOrigin = 'Anonymous'
-      img.onload = ->
+      img.onload = =>
         canvas.height = img.height
         canvas.width = img.width
-        ctx.drawImage(img, 0, 0)
 
-        dataURL = canvas.toDataURL(contentType)
-        resolve(dataURL)
+        ctx.drawImage(img, 0, 0)
+        topData = ctx.getImageData(0, 0, img.width, 20)
+        bottomData = ctx.getImageData(0, img.height - 16, img.width, img.height)
+
+        resolve({
+          dataUri: canvas.toDataURL(contentType)
+          topGrayscale: @rgbToGrayscale(@averageRgb(topData))
+          bottomGrayscale: @rgbToGrayscale(@averageRgb(bottomData))
+        })
+
         $(canvas).remove()
       img.src = url
+
+  averageRgb: (data) ->
+    count = 0
+    index = 0
+    rgb = { r: 0, g: 0, b: 0 }
+
+    while (true)
+      break if index >= data.data.length
+      rgb.r += data.data[index]
+      rgb.g += data.data[index + 1]
+      rgb.b += data.data[index + 2]
+      index += 5 * 4 # sample every 5 pixels
+      count += 1
+
+    rgb.r = Math.floor(rgb.r / count)
+    rgb.g = Math.floor(rgb.g / count)
+    rgb.b = Math.floor(rgb.b / count)
+
+    rgb
+
+  rgbToGrayscale: (rgb) ->
+    console.log rgb
+    (0.21 * rgb.r) + (0.72 * rgb.g) + (0.07 * rgb.b)
 
   #
   # Private Classes
