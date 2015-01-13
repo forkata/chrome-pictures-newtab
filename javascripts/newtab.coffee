@@ -51,6 +51,11 @@ class ChromePicturesNewTab
   displayPhoto: (photo) ->
     console.log "Displaying photo", photo
 
+    chrome.storage.local.get ["current-photo-timestamp"], (data) ->
+      if !data["current-photo-timestamp"]
+        data["current-photo-timestamp"] = (new Date()).getTime()
+        chrome.storage.local.set data
+
     # @$photo.css "background-image", "url('#{photo.url}')"
     @$photo.css "background-image", "url(#{photo.dataUri})"
 
@@ -216,7 +221,6 @@ class ChromePicturesNewTab
               webUrl: webUrl
               ownerName: ownerName
               ownerWebUrl: ownerWebUrl
-              timestamp: (new Date()).getTime()
               isPinned: false
             })
       .catch ->

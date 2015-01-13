@@ -70,6 +70,12 @@
 
     ChromePicturesNewTab.prototype.displayPhoto = function(photo) {
       console.log("Displaying photo", photo);
+      chrome.storage.local.get(["current-photo-timestamp"], function(data) {
+        if (!data["current-photo-timestamp"]) {
+          data["current-photo-timestamp"] = (new Date()).getTime();
+          return chrome.storage.local.set(data);
+        }
+      });
       this.$photo.css("background-image", "url(" + photo.dataUri + ")");
       this.$photoTitleLink.text(photo.title);
       this.$photoTitleLink.attr("href", photo.webUrl);
@@ -264,7 +270,6 @@
                   webUrl: webUrl,
                   ownerName: ownerName,
                   ownerWebUrl: ownerWebUrl,
-                  timestamp: (new Date()).getTime(),
                   isPinned: false
                 });
               });
