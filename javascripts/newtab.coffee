@@ -184,7 +184,11 @@ class ChromePicturesNewTab
       per_page: ChromePicturesNewTab.FetchSize
       page: 1
 
-      tags: "NASA"
+      content_type: "1"
+      media: "photos"
+      # tags: "NASA,space,galaxy,planet"
+      group_id: "1484051@N25"
+      sort: "interestingness-desc"
       extras: "license,owner_name"
       license: "1,2,3,4,5,7"
     })
