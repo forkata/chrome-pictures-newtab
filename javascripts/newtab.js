@@ -278,15 +278,10 @@
     };
 
     ChromePicturesNewTab.prototype.fetchPhotos = function() {
-      return this.flickrApiRequest("flickr.photos.search", {
+      return this.flickrApiRequest("flickr.interestingness.getList", {
         per_page: this.fetchSize,
         page: 1,
-        content_type: "1",
-        media: "photos",
-        group_id: "1484051@N25",
-        sort: "interestingness-desc",
-        extras: "license,owner_name",
-        license: "1,2,3,4,5,7"
+        extras: "license,owner_name"
       });
     };
 

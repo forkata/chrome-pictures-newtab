@@ -224,17 +224,10 @@ class ChromePicturesNewTab
         reject.apply(null, arguments)
 
   fetchPhotos: ->
-    @flickrApiRequest("flickr.photos.search", {
+    @flickrApiRequest("flickr.interestingness.getList", {
       per_page: @fetchSize
       page: 1
-
-      content_type: "1"
-      media: "photos"
-      # tags: "NASA,space,galaxy,planet"
-      group_id: "1484051@N25"
-      sort: "interestingness-desc"
       extras: "license,owner_name"
-      license: "1,2,3,4,5,7"
     })
 
   fetchPhotoSizes: (id) ->

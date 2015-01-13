@@ -38,12 +38,12 @@ body {
 
 #photo-footer[data-color=dark] > a {
   color: white;
-  text-shadow: 0px 0px 5px rgba(0, 0, 0, 1);
+  text-shadow: 0px 1px 0px rgba(64, 64, 64, 1);
 }
 
 #photo-footer[data-color=light] > a {
   color: black;
-  text-shadow: 0px 0px 5px rgba(255, 255, 255, 1);
+  text-shadow: 0px 1px 0px rgba(190, 190, 190, 1);
 }
 
 #photo-footer > a:hover {
@@ -141,12 +141,12 @@ body {
 
 #bookmarks-bar[data-color=dark] .bookmark-item a span {
   color: white;
-  text-shadow: 0px 0px 5px rgba(0, 0, 0, 1);
+  text-shadow: 0px 1px 0px rgba(64, 64, 64, 1);
 }
 
 #bookmarks-bar[data-color=light] .bookmark-item a span {
   color: black;
-  text-shadow: 0px 0px 5px rgba(255, 255, 255, 1);
+  text-shadow: 0px 1px 0px rgba(190, 190, 190, 1);
 }
 
 /* Bookmarks Popup */
