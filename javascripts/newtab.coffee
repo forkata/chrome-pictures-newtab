@@ -18,20 +18,19 @@ class ChromePicturesNewTab
       @viewportHeight = @$viewport.height()
     , false
 
-    @ensureCachedPhoto().then (photo) =>
-      @displayPhoto(photo)
-
-      # Timeout set to 900 seconds (15 minutes)
+    @ensureCachedPhoto("current").then (photo) =>
       timedOut = ((new Date()).getTime() -  parseInt(photo.timestamp || 0, 10)) > 900000
       if timedOut && !photo.isPinned
-        @refreshPhoto()
+        @advancePhoto()
+      else
+        @displayPhoto(photo)
+        @ensureCachedPhoto("next")
 
     @bookmarksBar = new BookmarksBar()
     @bookmarksBar.render(@$viewport[0])
 
     @$photoRefreshLink.on "click", =>
-      @refreshPhoto().then (photo) =>
-        @displayPhoto(photo)
+      @refreshPhoto()
 
     @$photoPinLink.on "click", =>
       data = {}
@@ -62,18 +61,25 @@ class ChromePicturesNewTab
     else
       @$photoPinLink.text("Pin")
 
-  refreshPhoto: ->
-    @fetchPhoto().then((photo) =>
-      @savePhoto(photo, "current")
-    ).then =>
-      @cachedPhoto("current")
+    null
 
-  ensureCachedPhoto: ->
-    @cachedPhoto("current").then(null, =>
+  advancePhoto: ->
+    @cachedPhoto("next").then (photo) =>
+      @savePhoto(photo, "current").then =>
+        @displayPhoto(photo)
+        @deleteCachedPhoto("next").then =>
+          @ensureCachedPhoto("next")
+
+  refreshPhoto: ->
+    @fetchPhoto().then (photo) =>
+      @savePhoto(photo, "next").then =>
+        @advancePhoto()
+
+  ensureCachedPhoto: (prefix) ->
+    @cachedPhoto(prefix).then null, =>
       @fetchPhoto().then (photo) =>
-        @savePhoto(photo, "current")
-    ).then =>
-      @cachedPhoto("current")
+        @savePhoto(photo, prefix)
+        photo
 
   cachedPhoto: (prefix) ->
     new RSVP.Promise (resolve, reject) =>
@@ -91,25 +97,44 @@ class ChromePicturesNewTab
         ], (data) =>
           photo = @decodePhoto(data)
           if photo.dataUri?.length > 0
-            console.log "Photo cache hit"
+            console.log "Photo cache hit: #{prefix}"
             resolve(photo)
           else
-            console.warn "Photo cache miss"
+            console.warn "Photo cache miss: #{prefix}"
             reject()
       catch err
-        console.error "Photo cache error"
+        console.error "Photo cache error: #{prefix}", err
         reject(err)
 
   savePhoto: (photo, prefix) ->
     new RSVP.Promise (resolve, reject) =>
       try
         data = @encodePhoto(photo, prefix)
-        chrome.storage.local.set(data, ->
+        chrome.storage.local.set data, ->
           console.log "Photo saved with prefix: #{prefix}"
           resolve()
-        )
       catch err
         console.error "Error saving photo", err
+        reject(err)
+
+  deleteCachedPhoto: (prefix) ->
+    new RSVP.Promise (resolve, reject) =>
+      try
+        chrome.storage.local.remove [
+          "#{prefix}-photo-dataUri"
+          "#{prefix}-photo-url"
+          "#{prefix}-photo-contentType"
+          "#{prefix}-photo-title"
+          "#{prefix}-photo-webUrl"
+          "#{prefix}-photo-ownerName"
+          "#{prefix}-photo-ownerWebUrl"
+          "#{prefix}-photo-timestamp"
+          "#{prefix}-photo-isPinned"
+        ], ->
+          console.log "Photo deleted with prefix: #{prefix}"
+          resolve()
+      catch err
+        console.error "Error deleting photo", err
         reject(err)
 
   decodePhoto: (data) ->

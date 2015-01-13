@@ -24,13 +24,15 @@
           return _this.viewportHeight = _this.$viewport.height();
         };
       })(this), false);
-      this.ensureCachedPhoto().then((function(_this) {
+      this.ensureCachedPhoto("current").then((function(_this) {
         return function(photo) {
           var timedOut;
-          _this.displayPhoto(photo);
           timedOut = ((new Date()).getTime() - parseInt(photo.timestamp || 0, 10)) > 900000;
           if (timedOut && !photo.isPinned) {
-            return _this.refreshPhoto();
+            return _this.advancePhoto();
+          } else {
+            _this.displayPhoto(photo);
+            return _this.ensureCachedPhoto("next");
           }
         };
       })(this));
@@ -38,16 +40,15 @@
       this.bookmarksBar.render(this.$viewport[0]);
       this.$photoRefreshLink.on("click", (function(_this) {
         return function() {
-          return _this.refreshPhoto().then(function(photo) {
-            return _this.displayPhoto(photo);
-          });
+          return _this.refreshPhoto();
         };
       })(this));
       this.$photoPinLink.on("click", (function(_this) {
         return function() {
-          return chrome.storage.local.set({
-            photoIsPinned: true
-          }, function() {
+          var data;
+          data = {};
+          data["current-photo-isPinned"] = true;
+          return chrome.storage.local.set(data, function() {
             return _this.$photoPinLink.text("Pinned");
           });
         };
@@ -73,34 +74,43 @@
       this.$photoTitleOwnerLink.html("&copy; " + photo.ownerName);
       this.$photoTitleOwnerLink.attr("href", photo.ownerWebUrl);
       if (photo.isPinned) {
-        return this.$photoPinLink.text("Pinned");
+        this.$photoPinLink.text("Pinned");
       } else {
-        return this.$photoPinLink.text("Pin");
+        this.$photoPinLink.text("Pin");
       }
+      return null;
+    };
+
+    ChromePicturesNewTab.prototype.advancePhoto = function() {
+      return this.cachedPhoto("next").then((function(_this) {
+        return function(photo) {
+          return _this.savePhoto(photo, "current").then(function() {
+            _this.displayPhoto(photo);
+            return _this.deleteCachedPhoto("next").then(function() {
+              return _this.ensureCachedPhoto("next");
+            });
+          });
+        };
+      })(this));
     };
 
     ChromePicturesNewTab.prototype.refreshPhoto = function() {
       return this.fetchPhoto().then((function(_this) {
         return function(photo) {
-          return _this.savePhoto(photo, "current");
-        };
-      })(this)).then((function(_this) {
-        return function() {
-          return _this.cachedPhoto("current");
+          return _this.savePhoto(photo, "next").then(function() {
+            return _this.advancePhoto();
+          });
         };
       })(this));
     };
 
-    ChromePicturesNewTab.prototype.ensureCachedPhoto = function() {
-      return this.cachedPhoto("current").then(null, (function(_this) {
+    ChromePicturesNewTab.prototype.ensureCachedPhoto = function(prefix) {
+      return this.cachedPhoto(prefix).then(null, (function(_this) {
         return function() {
           return _this.fetchPhoto().then(function(photo) {
-            return _this.savePhoto(photo, "current");
+            _this.savePhoto(photo, prefix);
+            return photo;
           });
-        };
-      })(this)).then((function(_this) {
-        return function() {
-          return _this.cachedPhoto("current");
         };
       })(this));
     };
@@ -114,16 +124,16 @@
               var photo, _ref;
               photo = _this.decodePhoto(data);
               if (((_ref = photo.dataUri) != null ? _ref.length : void 0) > 0) {
-                console.log("Photo cache hit");
+                console.log("Photo cache hit: " + prefix);
                 return resolve(photo);
               } else {
-                console.warn("Photo cache miss");
+                console.warn("Photo cache miss: " + prefix);
                 return reject();
               }
             });
           } catch (_error) {
             err = _error;
-            console.error("Photo cache error");
+            console.error("Photo cache error: " + prefix, err);
             return reject(err);
           }
         };
@@ -143,6 +153,24 @@
           } catch (_error) {
             err = _error;
             console.error("Error saving photo", err);
+            return reject(err);
+          }
+        };
+      })(this));
+    };
+
+    ChromePicturesNewTab.prototype.deleteCachedPhoto = function(prefix) {
+      return new RSVP.Promise((function(_this) {
+        return function(resolve, reject) {
+          var err;
+          try {
+            return chrome.storage.local.remove(["" + prefix + "-photo-dataUri", "" + prefix + "-photo-url", "" + prefix + "-photo-contentType", "" + prefix + "-photo-title", "" + prefix + "-photo-webUrl", "" + prefix + "-photo-ownerName", "" + prefix + "-photo-ownerWebUrl", "" + prefix + "-photo-timestamp", "" + prefix + "-photo-isPinned"], function() {
+              console.log("Photo deleted with prefix: " + prefix);
+              return resolve();
+            });
+          } catch (_error) {
+            err = _error;
+            console.error("Error deleting photo", err);
             return reject(err);
           }
         };
