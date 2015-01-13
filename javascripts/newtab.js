@@ -28,7 +28,7 @@
       this.ensureCachedPhoto("current").then((function(_this) {
         return function(photo) {
           var timedOut;
-          timedOut = ((new Date()).getTime() - parseInt(photo.timestamp || 0, 10)) > 900000;
+          timedOut = ((new Date()).getTime() - (parseInt(photo.timestamp, 10) || Infinity)) > 900000;
           if (timedOut && !photo.isPinned) {
             return _this.advancePhoto();
           } else {

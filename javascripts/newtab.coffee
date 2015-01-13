@@ -20,7 +20,7 @@ class ChromePicturesNewTab
     , false
 
     @ensureCachedPhoto("current").then (photo) =>
-      timedOut = ((new Date()).getTime() -  parseInt(photo.timestamp || 0, 10)) > 900000
+      timedOut = ((new Date()).getTime() -  (parseInt(photo.timestamp, 10) || Infinity)) > 900000
       if timedOut && !photo.isPinned
         @advancePhoto()
       else
