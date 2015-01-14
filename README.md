@@ -1,6 +1,6 @@
 # Chrome Pictures New Tab
 
-_TODO: enter a description here_
+Display interesting photos from Flickr on the New Tab page along with bookmarks from the Bookmarks Bar.
 
 ### License
 

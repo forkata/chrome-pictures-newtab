@@ -1,7 +1,7 @@
 {
   "manifest_version": 2,
   "name": "Pictures New Tab",
-  "description" : "TODO: enter a description here",
+  "description" : "Display interesting photos from Flickr on the New Tab page along with bookmarks from the Bookmarks Bar.",
   "version": "1.0",
   "homepage_url": "https://github.com/qiushihe/chrome-pictures-newtab",
   "icons": {
