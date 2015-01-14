@@ -14,10 +14,7 @@
     "newtab": "newtab.html"
   },
   "permissions": [
-    "tabs",
-    "<all_urls>",
     "bookmarks",
-    "management",
     "storage",
     "unlimitedStorage"
   ]
