@@ -136,7 +136,11 @@ body {
   top: 0px;
   right: 0px;
   padding-left: 0px;
-  padding-right: 10px;
+  padding-right: 6px;
+}
+
+#bookmarks-bar .bookmarks-list.other-bookmarks .bookmark-item a {
+  padding: 0px 0px 0px 6px;
 }
 
 #bookmarks-bar[data-color=dark] .bookmark-item a span {
