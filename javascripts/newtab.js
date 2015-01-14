@@ -32,7 +32,6 @@
           photoTime = parseInt(photo.timestamp) || Infinity;
           diffTime = nowTime - photoTime;
           timedOut = diffTime > 900000;
-          console.log(nowTime, photoTime, diffTime, timedOut);
           if (timedOut && !photo.isPinned) {
             return _this.advancePhoto();
           } else {
@@ -84,7 +83,7 @@
           return chrome.storage.local.set(data);
         }
       });
-      this.$photo.css("background-image", "url('" + photo.url + "')");
+      this.$photo.css("background-image", "url(" + photo.dataUri + ")");
       this.$photoTitleLink.text(photo.title);
       this.$photoTitleLink.attr("href", photo.webUrl);
       this.$photoTitleOwnerLink.html("&copy; " + photo.ownerName);
