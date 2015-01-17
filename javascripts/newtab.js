@@ -44,7 +44,12 @@
       this.bookmarksBar.render(this.$viewport[0]);
       this.$photoRefreshLink.on("click", (function(_this) {
         return function() {
-          return _this.refreshPhoto();
+          if (!_this.$photoRefreshLink.hasClass("loading")) {
+            _this.refreshPhoto().then(function() {
+              return _this.$photoRefreshLink.removeClass("loading");
+            });
+          }
+          return _this.$photoRefreshLink.addClass("loading");
         };
       })(this));
       this.$photoPinLink.on("click", (function(_this) {
@@ -83,7 +88,7 @@
           return chrome.storage.local.set(data);
         }
       });
-      this.$photo.css("background-image", "url(" + photo.dataUri + ")");
+      this.$photo.css("background-image", "url('" + photo.url + "')");
       this.$photoTitleLink.text(photo.title);
       this.$photoTitleLink.attr("href", photo.webUrl);
       this.$photoTitleOwnerLink.html("&copy; " + photo.ownerName);

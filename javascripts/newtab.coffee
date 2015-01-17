@@ -35,7 +35,10 @@ class ChromePicturesNewTab
     @bookmarksBar.render(@$viewport[0])
 
     @$photoRefreshLink.on "click", =>
-      @refreshPhoto()
+      if !@$photoRefreshLink.hasClass("loading")
+        @refreshPhoto().then =>
+          @$photoRefreshLink.removeClass("loading")
+      @$photoRefreshLink.addClass("loading")
 
     @$photoPinLink.on "click", =>
       data = {}

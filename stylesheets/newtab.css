@@ -63,6 +63,62 @@ body {
   padding-left: 3px;
 }
 
+#photo-refresh-link {
+  display: inline-block;
+}
+
+#photo-refresh-link.loading {
+  text-align: center;
+}
+
+#photo-refresh-link.loading span {
+  display: none;
+}
+
+#photo-refresh-link.loading .bounce {
+  width: 8px;
+  height: 8px;
+  border-radius: 100%;
+  display: inline-block;
+  -webkit-animation: bouncedelay 1.4s infinite ease-in-out;
+  animation: bouncedelay 1.4s infinite ease-in-out;
+  -webkit-animation-fill-mode: both;
+  animation-fill-mode: both;
+}
+
+#photo-footer[data-color=dark] #photo-refresh-link.loading .bounce {
+  background-color: white;
+}
+
+#photo-footer[data-color=light] #photo-refresh-link.loading .bounce {
+  background-color: black;
+}
+
+#photo-refresh-link.loading .bounce1 {
+  -webkit-animation-delay: -0.32s;
+  animation-delay: -0.32s;
+}
+
+#photo-refresh-link.loading .bounce2 {
+  -webkit-animation-delay: -0.16s;
+  animation-delay: -0.16s;
+}
+
+@-webkit-keyframes bouncedelay {
+  0%, 80%, 100% { -webkit-transform: scale(0.0) }
+  40% { -webkit-transform: scale(1.0) }
+}
+
+@keyframes bouncedelay {
+  0%, 80%, 100% {
+    transform: scale(0.0);
+    -webkit-transform: scale(0.0);
+  } 40% {
+    transform: scale(1.0);
+    -webkit-transform: scale(1.0);
+  }
+}
+
 /* Bookmark Item */
 
 .bookmark-item {
