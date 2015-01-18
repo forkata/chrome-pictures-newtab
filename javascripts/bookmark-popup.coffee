@@ -4,6 +4,8 @@ class @BookmarksPopup
     @parentPopup = @options.parentPopup
     @parentRegion = @options.parentRegion
     @folderId = @options.folderId
+    @bookmarkItem = @options.bookmarkItem
+    @delegate = @options.delegate
 
   render: (@$target) ->
     @$el = document.createElement("ul")
@@ -62,6 +64,7 @@ class @BookmarksPopup
     @hidePopupIfPresent()
     @flowtip.hide()
     @flowtip.destroy()
+    @delegate?.BookmarksPopupDidHideWithBookmarkItem?(@bookmarkItem)
 
   hidePopupIfPresent: ->
     if @popup
@@ -76,14 +79,21 @@ class @BookmarksPopup
         parentRegion: if @parentPopup
           @flowtip._region
         folderId: bookmarkItem.bookmarkId
+        bookmarkItem: bookmarkItem
+        delegate: this
       })
       @popup.render(bookmarkItem.$link)
+
+    $(bookmarkItem.$el).addClass("folder-opened")
 
   maxHeight: ->
     if @parentPopup
       document.body.clientHeight - 20 # edgeOffset x 2
     else
       document.body.clientHeight - 41 # bookmarks-bar height + 1px border
+
+  BookmarksPopupDidHideWithBookmarkItem: (bookmarkItem) ->
+    $(bookmarkItem.$el).removeClass("folder-opened")
 
   BookmarkItemDidMouseOver: (bookmarkItem) ->
     if bookmarkItem.isFolder()

@@ -22,9 +22,18 @@ class @BookmarksList
   openFolder: (bookmarkItem) ->
     chrome.bookmarks.getChildren bookmarkItem.bookmarkId, (bookmarks) =>
       @hidePopupIfPresent()
-      @popup = new BookmarksPopup(bookmarks, { folderId: bookmarkItem.bookmarkId })
+      @popup = new BookmarksPopup bookmarks, {
+        bookmarkItem: bookmarkItem
+        folderId: bookmarkItem.bookmarkId
+        delegate: this
+      }
       @popup.render(bookmarkItem.$link)
+
+    $(bookmarkItem.$el).addClass("folder-opened")
     @delegate?.BookmarksListDidOpenFolder?(this)
+
+  BookmarksPopupDidHideWithBookmarkItem: (bookmarkItem) ->
+    $(bookmarkItem.$el).removeClass("folder-opened")
 
   BookmarkItemDidClick: (bookmarkItem) ->
     @openFolder(bookmarkItem) if bookmarkItem.isFolder()
