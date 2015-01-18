@@ -17,6 +17,7 @@
       this.$photoTitleOwnerLink = $("#photo-title-owner-link");
       this.$photoRefreshLink = $("#photo-refresh-link");
       this.$photoPinLink = $("#photo-pin-link");
+      this.$photoPinLinkText = $("#photo-pin-link span");
       this.viewportWidth = this.$viewport.width();
       this.viewportHeight = this.$viewport.height();
       window.addEventListener("resize", (function(_this) {
@@ -44,21 +45,15 @@
       this.bookmarksBar.render(this.$viewport[0]);
       this.$photoRefreshLink.on("click", (function(_this) {
         return function() {
-          if (!_this.$photoRefreshLink.hasClass("loading")) {
-            _this.refreshPhoto().then(function() {
-              return _this.$photoRefreshLink.removeClass("loading");
-            });
-          }
-          return _this.$photoRefreshLink.addClass("loading");
+          return _this.withLoadingAnimation(_this.$photoRefreshLink, function() {
+            return _this.refreshPhoto();
+          });
         };
       })(this));
       this.$photoPinLink.on("click", (function(_this) {
         return function() {
-          var data;
-          data = {};
-          data["current-photo-isPinned"] = true;
-          return chrome.storage.local.set(data, function() {
-            return _this.$photoPinLink.text("Pinned");
+          return _this.withLoadingAnimation(_this.$photoPinLink, function() {
+            return _this.togglePinned();
           });
         };
       })(this));
@@ -75,6 +70,34 @@
         };
       })(this), false);
     }
+
+    ChromePicturesNewTab.prototype.withLoadingAnimation = function($target, func) {
+      if (!$target.hasClass("loading")) {
+        $target.addClass("loading");
+        return func().then((function(_this) {
+          return function() {
+            return $target.removeClass("loading");
+          };
+        })(this));
+      }
+    };
+
+    ChromePicturesNewTab.prototype.togglePinned = function() {
+      return this.cachedPhoto("current").then((function(_this) {
+        return function(photo) {
+          photo.isPinned = !photo.isPinned;
+          return chrome.storage.local.set({
+            "current-photo-isPinned": photo.isPinned
+          }, function() {
+            return _this.updatePinnedDisplay(photo);
+          });
+        };
+      })(this));
+    };
+
+    ChromePicturesNewTab.prototype.updatePinnedDisplay = function(photo) {
+      return this.$photoPinLinkText.text(photo.isPinned ? "Unpin" : "Pin");
+    };
 
     ChromePicturesNewTab.prototype.displayPhoto = function(photo) {
       console.log("Displaying photo", photo);
@@ -103,11 +126,7 @@
       } else {
         $(this.bookmarksBar.$el).attr("data-color", "light");
       }
-      if (photo.isPinned) {
-        this.$photoPinLink.text("Pinned");
-      } else {
-        this.$photoPinLink.text("Pin");
-      }
+      this.updatePinnedDisplay(photo);
       return null;
     };
 

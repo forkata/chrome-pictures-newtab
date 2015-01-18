@@ -67,15 +67,15 @@ body {
   display: inline-block;
 }
 
-#photo-refresh-link.loading {
+.loadable.loading {
   text-align: center;
 }
 
-#photo-refresh-link.loading span {
+.loadable.loading span {
   display: none;
 }
 
-#photo-refresh-link.loading .bounce {
+.loadable.loading .bounce {
   width: 8px;
   height: 8px;
   border-radius: 100%;
@@ -86,20 +86,20 @@ body {
   animation-fill-mode: both;
 }
 
-#photo-footer[data-color=dark] #photo-refresh-link.loading .bounce {
+#photo-footer[data-color=dark] .loadable.loading .bounce {
   background-color: white;
 }
 
-#photo-footer[data-color=light] #photo-refresh-link.loading .bounce {
+#photo-footer[data-color=light] .loadable.loading .bounce {
   background-color: black;
 }
 
-#photo-refresh-link.loading .bounce1 {
+.loadable.loading .bounce1 {
   -webkit-animation-delay: -0.32s;
   animation-delay: -0.32s;
 }
 
-#photo-refresh-link.loading .bounce2 {
+.loadable.loading .bounce2 {
   -webkit-animation-delay: -0.16s;
   animation-delay: -0.16s;
 }

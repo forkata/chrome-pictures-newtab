@@ -11,6 +11,7 @@ class ChromePicturesNewTab
     @$photoTitleOwnerLink = $("#photo-title-owner-link")
     @$photoRefreshLink = $("#photo-refresh-link")
     @$photoPinLink = $("#photo-pin-link")
+    @$photoPinLinkText = $("#photo-pin-link span")
 
     @viewportWidth = @$viewport.width()
     @viewportHeight = @$viewport.height()
@@ -35,16 +36,12 @@ class ChromePicturesNewTab
     @bookmarksBar.render(@$viewport[0])
 
     @$photoRefreshLink.on "click", =>
-      if !@$photoRefreshLink.hasClass("loading")
-        @refreshPhoto().then =>
-          @$photoRefreshLink.removeClass("loading")
-      @$photoRefreshLink.addClass("loading")
+      @withLoadingAnimation @$photoRefreshLink, =>
+        @refreshPhoto()
 
     @$photoPinLink.on "click", =>
-      data = {}
-      data["current-photo-isPinned"] = true
-      chrome.storage.local.set data, =>
-        @$photoPinLink.text("Pinned")
+      @withLoadingAnimation @$photoPinLink, =>
+        @togglePinned()
 
     document.body.addEventListener "click", (event) =>
       unless $(event.target).closest(".bookmarks-popup").length
@@ -54,6 +51,26 @@ class ChromePicturesNewTab
     window.addEventListener "resize", =>
       @bookmarksBar.hidePopupIfPresent()
     , false
+
+  withLoadingAnimation: ($target, func) ->
+    if !$target.hasClass("loading")
+      $target.addClass("loading")
+      func().then =>
+        $target.removeClass("loading")
+
+  togglePinned: ->
+    @cachedPhoto("current").then (photo) =>
+      photo.isPinned = !photo.isPinned
+      chrome.storage.local.set {
+        "current-photo-isPinned": photo.isPinned
+      }, =>
+        @updatePinnedDisplay(photo)
+
+  updatePinnedDisplay: (photo) ->
+    @$photoPinLinkText.text if photo.isPinned
+      "Unpin"
+    else
+      "Pin"
 
   displayPhoto: (photo) ->
     console.log "Displaying photo", photo
@@ -66,8 +83,8 @@ class ChromePicturesNewTab
         data["current-photo-timestamp"] = photoTime
         chrome.storage.local.set data
 
-    # @$photo.css "background-image", "url('#{photo.url}')"
-    @$photo.css "background-image", "url(#{photo.dataUri})"
+    @$photo.css "background-image", "url('#{photo.url}')"
+    # @$photo.css "background-image", "url(#{photo.dataUri})"
 
     @$photoTitleLink.text(photo.title)
     @$photoTitleLink.attr("href", photo.webUrl)
@@ -84,11 +101,7 @@ class ChromePicturesNewTab
     else
       $(@bookmarksBar.$el).attr("data-color", "light")
 
-    if photo.isPinned
-      @$photoPinLink.text("Pinned")
-    else
-      @$photoPinLink.text("Pin")
-
+    @updatePinnedDisplay(photo)
     null
 
   advancePhoto: ->
