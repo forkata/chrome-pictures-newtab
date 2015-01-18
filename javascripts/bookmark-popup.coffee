@@ -29,6 +29,7 @@ class @BookmarksPopup
         targetAlign: "edge"
         leftTargetAlignOffset: 0
         rightTargetAlignOffset: -0.1
+        targetOffset: 6
       }
     else
       {
@@ -41,6 +42,7 @@ class @BookmarksPopup
         rootAlignOffset: 0
         targetAlign: "edge"
         targetAlignOffset: 0
+        targetOffset: 1
       }
 
     @flowtip = new FlowTip(_.extend({
