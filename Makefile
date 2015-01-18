@@ -1,25 +1,37 @@
-all: js
+all: clean js css
+	cp -r extension/* build/
 
-js: javascripts/newtab.js javascripts/bookmark-item.js javascripts/bookmark-popup.js javascripts/bookmark-list.js javascripts/bookmark-bar.js
+pack: all
+	zip -r build.zip build
 
-javascripts/newtab.js: javascripts/newtab.coffee
-	coffee -o javascripts -c javascripts/newtab.coffee
+js: build/newtab.js build/bookmark-item.js build/bookmark-popup.js build/bookmark-list.js build/bookmark-bar.js
+	cp -r javascripts/vendor/* build/
 
-javascripts/bookmark-item.js: javascripts/bookmark-item.coffee
-	coffee -o javascripts -c javascripts/bookmark-item.coffee
+build/newtab.js: javascripts/newtab.coffee
+	coffee -o build -c javascripts/newtab.coffee
 
-javascripts/bookmark-popup.js: javascripts/bookmark-popup.coffee
-	coffee -o javascripts -c javascripts/bookmark-popup.coffee
+build/bookmark-item.js: javascripts/bookmark-item.coffee
+	coffee -o build -c javascripts/bookmark-item.coffee
 
-javascripts/bookmark-list.js: javascripts/bookmark-list.coffee
-	coffee -o javascripts -c javascripts/bookmark-list.coffee
+build/bookmark-popup.js: javascripts/bookmark-popup.coffee
+	coffee -o build -c javascripts/bookmark-popup.coffee
 
-javascripts/bookmark-bar.js: javascripts/bookmark-bar.coffee
-	coffee -o javascripts -c javascripts/bookmark-bar.coffee
+build/bookmark-list.js: javascripts/bookmark-list.coffee
+	coffee -o build -c javascripts/bookmark-list.coffee
+
+build/bookmark-bar.js: javascripts/bookmark-bar.coffee
+	coffee -o build -c javascripts/bookmark-bar.coffee
+
+css: build/newtab.css build/bookmark.css
+	cp -r stylesheets/vendor/* build/
+
+build/newtab.css: stylesheets/newtab.sass
+	sass stylesheets/newtab.sass build/newtab.css
+
+build/bookmark.css: stylesheets/bookmark.sass
+	sass stylesheets/bookmark.sass build/bookmark.css
 
 clean:
-	rm -f javascripts/newtab.js
-	rm -f javascripts/bookmark-item.js
-	rm -f javascripts/bookmark-popup.js
-	rm -f javascripts/bookmark-list.js
-	rm -f javascripts/bookmark-bar.js
+	rm -fr build
+	rm -fr build.zip
+	mkdir build
