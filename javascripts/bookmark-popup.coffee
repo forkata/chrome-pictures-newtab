@@ -1,20 +1,16 @@
-class @BookmarksPopup
+class @BookmarksPopup extends BookmarksList
 
   constructor: (@bookmarks, @options = {}, @flowtipOptions = {}) ->
+    super(@bookmarks, @options)
     @parentPopup = @options.parentPopup
     @parentRegion = @options.parentRegion
     @folderId = @options.folderId
     @bookmarkItem = @options.bookmarkItem
-    @delegate = @options.delegate
 
   render: (@$target) ->
     @$el = document.createElement("ul")
-    @$el.className = "bookmarks-list"
-
-    for bookmark in @bookmarks
-      bookmarkItem = new BookmarkItem(bookmark)
-      bookmarkItem.delegate = this
-      bookmarkItem.render(@$el)
+    @$el.className = "bookmarks-list clearfix"
+    @renderBookmarks()
 
     flowtipOptions = if @parentPopup
       {
@@ -68,34 +64,21 @@ class @BookmarksPopup
     @flowtip.destroy()
     @delegate?.BookmarksPopupDidHideWithBookmarkItem?(@bookmarkItem)
 
-  hidePopupIfPresent: ->
-    if @popup
-      @popup.hide()
-      @popup = null
-
-  openFolder: (bookmarkItem) ->
-    chrome.bookmarks.getChildren bookmarkItem.bookmarkId, (bookmarks) =>
-      @hidePopupIfPresent()
-      @popup = new BookmarksPopup(bookmarks, {
-        parentPopup: this
-        parentRegion: if @parentPopup
-          @flowtip._region
-        folderId: bookmarkItem.bookmarkId
-        bookmarkItem: bookmarkItem
-        delegate: this
-      })
-      @popup.render(bookmarkItem.$link)
-
-    $(bookmarkItem.$el).addClass("folder-opened")
+  popupOptions: (bookmarkItem) ->
+    {
+      parentPopup: this
+      parentRegion: if @parentPopup
+        @flowtip._region
+      folderId: bookmarkItem.bookmarkId
+      bookmarkItem: bookmarkItem
+      delegate: this
+    }
 
   maxHeight: ->
     if @parentPopup
       document.body.clientHeight - 20 # edgeOffset x 2
     else
       document.body.clientHeight - 41 # bookmarks-bar height + 1px border
-
-  BookmarksPopupDidHideWithBookmarkItem: (bookmarkItem) ->
-    $(bookmarkItem.$el).removeClass("folder-opened")
 
   BookmarkItemDidMouseOver: (bookmarkItem) ->
     if bookmarkItem.isFolder()
@@ -128,8 +111,8 @@ class @BookmarksPopup
         clearTimeout(@mouseoutTimeout)
         @mouseoutTimeout = null
 
-    BookmarksPopupDidClickItem: (bookmarkItem) ->
-      if @parentPopup
-        @hidePopupIfPresent()
-      else
-        @hide()
+  BookmarksPopupDidClickItem: (bookmarkItem) ->
+    if @parentPopup
+      @hidePopupIfPresent()
+    else
+      @hide()
