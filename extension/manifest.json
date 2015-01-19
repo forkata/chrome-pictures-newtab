@@ -2,7 +2,7 @@
   "manifest_version": 2,
   "name": "Pictures New Tab",
   "description" : "Display interesting photos from Flickr on the New Tab page along with bookmarks from the Bookmarks Bar.",
-  "version": "1.0.7",
+  "version": "1.0.8",
   "homepage_url": "https://bitbucket.org/qiushihe",
   "icons": {
     "128": "icon_128.png",
