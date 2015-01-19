@@ -7,9 +7,9 @@ class @BookmarksPopup extends BookmarksList
     @folderId = @options.folderId
     @bookmarkItem = @options.bookmarkItem
 
-  render: (@$target) ->
-    @$el = document.createElement("ul")
-    @$el.className = "bookmarks-list clearfix"
+  render: (@target) ->
+    @el = document.createElement("ul")
+    @el.className = "bookmarks-list clearfix"
     @renderBookmarks()
 
     flowtipOptions = if @parentPopup
@@ -50,8 +50,8 @@ class @BookmarksPopup extends BookmarksList
       maxHeight: "#{@maxHeight()}px"
     }, flowtipOptions, @flowtipOptions))
 
-    @flowtip.setTooltipContent(@$el)
-    @flowtip.setTarget(@$target)
+    @flowtip.setTooltipContent(@el)
+    @flowtip.setTarget(@target)
     @flowtip.show()
 
     @flowtip.content.addEventListener "scroll", =>

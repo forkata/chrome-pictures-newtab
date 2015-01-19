@@ -3,17 +3,17 @@ class @BookmarksList
   constructor: (@bookmarks, @options = {}) ->
     @delegate = @options.delegate
 
-  render: (@$viewport) ->
-    @$el = document.createElement("ul")
-    @$el.className = "bookmarks-list clearfix"
-    @$viewport.appendChild(@$el)
+  render: (@viewport) ->
+    @el = document.createElement("ul")
+    @el.className = "bookmarks-list clearfix"
+    @viewport.appendChild(@el)
     @renderBookmarks()
 
   renderBookmarks: ->
     for bookmark in @bookmarks
       bookmarkItem = new BookmarkItem(bookmark)
       bookmarkItem.delegate = this
-      bookmarkItem.render(@$el)
+      bookmarkItem.render(@el)
 
   hidePopupIfPresent: ->
     if @popup
@@ -24,9 +24,9 @@ class @BookmarksList
     chrome.bookmarks.getChildren bookmarkItem.bookmarkId, (bookmarks) =>
       @hidePopupIfPresent()
       @popup = new BookmarksPopup bookmarks, @popupOptions(bookmarkItem)
-      @popup.render(bookmarkItem.$link)
+      @popup.render(bookmarkItem.link)
 
-    $(bookmarkItem.$el).addClass("folder-opened")
+    $(bookmarkItem.el).addClass("folder-opened")
     @delegate?.BookmarksListDidOpenFolder?(this)
 
   popupOptions: (bookmarkItem) ->
@@ -37,7 +37,7 @@ class @BookmarksList
     }
 
   BookmarksPopupDidHideWithBookmarkItem: (bookmarkItem) ->
-    $(bookmarkItem.$el).removeClass("folder-opened")
+    $(bookmarkItem.el).removeClass("folder-opened")
 
   BookmarkItemDidClick: (bookmarkItem) ->
     @openFolder(bookmarkItem) if bookmarkItem.isFolder()

@@ -15,6 +15,7 @@ class ChromePicturesNewTab
 
     @viewportWidth = @$viewport.width()
     @viewportHeight = @$viewport.height()
+
     window.addEventListener "resize", =>
       @viewportWidth = @$viewport.width()
       @viewportHeight = @$viewport.height()
@@ -97,9 +98,9 @@ class ChromePicturesNewTab
       @$photoFooter.attr("data-color", "light")
 
     if (photo.topGrayscale / 255.0) * 100 < 50
-      $(@bookmarksBar.$el).attr("data-color", "dark")
+      $(@bookmarksBar.el).attr("data-color", "dark")
     else
-      $(@bookmarksBar.$el).attr("data-color", "light")
+      $(@bookmarksBar.el).attr("data-color", "light")
 
     @updatePinnedDisplay(photo)
     null

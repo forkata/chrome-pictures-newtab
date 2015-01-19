@@ -6,19 +6,19 @@ class @BookmarksBar
         @bookmarks = bookmarks
         resolve(@bookmarks)
 
-  render: (@$viewport) ->
-    @$el = document.createElement("div")
-    @$el.id = "bookmarks-bar"
+  render: (@viewport) ->
+    @el = document.createElement("div")
+    @el.id = "bookmarks-bar"
 
-    @$viewport.appendChild(@$el)
+    @viewport.appendChild(@el)
 
     @bookmarksLoaded.then =>
       @mainBookmarksList = new BookmarksList(@bookmarks, { delegate: this })
-      @mainBookmarksList.render(@$el)
+      @mainBookmarksList.render(@el)
 
       @otherBookmarksList = new BookmarksList([{ id: "2", title: "Other Bookmarks" }], { delegate: this })
-      @otherBookmarksList.render(@$el)
-      @otherBookmarksList.$el.className += " other-bookmarks"
+      @otherBookmarksList.render(@el)
+      @otherBookmarksList.el.className += " other-bookmarks"
 
   hidePopupIfPresent: ->
     @otherBookmarksList.hidePopupIfPresent()
