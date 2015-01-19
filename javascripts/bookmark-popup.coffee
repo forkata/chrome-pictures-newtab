@@ -80,36 +80,46 @@ class @BookmarksPopup extends BookmarksList
     else
       document.body.clientHeight - 41 # bookmarks-bar height + 1px border
 
+  hidePopupUnlessForItem: (bookmarkItem) ->
+    if @popup && @popup.folderId != bookmarkItem.bookmarkId
+      @hidePopupIfPresent()
+
+  hidePopupIfPresent: ->
+    @clearMouseoutTimeout()
+    super
+
+  clearMouseoutTimeout: ->
+    if @mouseoutTimeout
+      clearTimeout(@mouseoutTimeout)
+      @mouseoutTimeout = null
+
   BookmarkItemDidMouseOver: (bookmarkItem) ->
     if bookmarkItem.isFolder()
       if @popup
-        @hidePopupIfPresent() if @popup.folderId != bookmarkItem.bookmarkId
+        if @popup.folderId != bookmarkItem.bookmarkId
+          @hidePopupIfPresent()
+          @openFolder(bookmarkItem)
       else
         @openFolder(bookmarkItem)
     else
-      @hidePopupIfPresent()
+      @hidePopupUnlessForItem(bookmarkItem)
 
     @parentPopup?.BookmarksPopupDidMouseOverItem?(bookmarkItem)
 
   BookmarkItemDidMouseOut: (bookmarkItem) ->
-    if bookmarkItem.isFolder()
-      unless @mouseoutTimeout
-        @mouseoutTimeout = _.delay =>
-          @hidePopupIfPresent()
-          @mouseoutTimeout = null
-        , 100
+    if bookmarkItem.isFolder() && @popup && !@mouseoutTimeout
+      @mouseoutTimeout = _.delay =>
+        @hidePopupIfPresent()
+      , 100
 
   BookmarkItemWillClick: (bookmarkItem) ->
-    if @popup && @popup.folderId != bookmarkItem.bookmarkId
-      @hidePopupIfPresent()
+    @hidePopupUnlessForItem(bookmarkItem)
 
   BookmarkItemDidClick: (bookmarkItem) ->
     @parentPopup?.BookmarksPopupDidClickItem?(bookmarkItem)
 
   BookmarksPopupDidMouseOverItem: (bookmarkItem) ->
-    if @mouseoutTimeout
-        clearTimeout(@mouseoutTimeout)
-        @mouseoutTimeout = null
+    @clearMouseoutTimeout()
 
   BookmarksPopupDidClickItem: (bookmarkItem) ->
     if @parentPopup
