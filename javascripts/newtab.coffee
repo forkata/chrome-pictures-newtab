@@ -85,8 +85,10 @@ class ChromePicturesNewTab
         data["current-photo-timestamp"] = photoTime
         chrome.storage.local.set data
 
-    @$photo.css "background-image", "url('#{photo.url}')"
-    # @$photo.css "background-image", "url(#{photo.dataUri})"
+    if window.ChromePicturesNewTabDeployed
+      @$photo.css "background-image", "url(#{photo.dataUri})"
+    else
+      @$photo.css "background-image", "url('#{photo.url}')"
 
     @$photoTitleLink.text(photo.title)
     @$photoTitleLink.attr("href", photo.webUrl)

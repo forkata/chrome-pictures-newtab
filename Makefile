@@ -1,8 +1,9 @@
 all: clean js css
 	cp -r extension/* build/
 
-pack: all
+pack: all build/deploy.js
 	zip -r build.zip build
+	rm -f build/deploy.js
 
 js: build/newtab.js build/bookmark-item.js build/bookmark-popup.js build/bookmark-list.js build/bookmark-bar.js
 	cp -r javascripts/vendor/* build/
@@ -21,6 +22,9 @@ build/bookmark-list.js: javascripts/bookmark-list.coffee
 
 build/bookmark-bar.js: javascripts/bookmark-bar.coffee
 	coffee -o build -c javascripts/bookmark-bar.coffee
+
+build/deploy.js: javascripts/deploy.coffee
+	coffee -o build -c javascripts/deploy.coffee
 
 css: build/newtab.css build/bookmark.css
 	cp -r stylesheets/vendor/* build/
