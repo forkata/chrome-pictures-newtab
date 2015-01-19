@@ -1,2 +1,1 @@
-window.onload = ->
-  window.ChromePicturesNewTabDeployed = true
+@ChromePicturesNewTabDeployed = true
