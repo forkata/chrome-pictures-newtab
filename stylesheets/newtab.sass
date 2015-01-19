@@ -22,35 +22,51 @@ body
   font-size: 10px
   font-family: sans-serif
   height: 16px
+  margin-bottom: 3px
   width: 100%
 
-  > a
+  .footer-section
+    display: inline-block
+
+    &.left
+      float: left
+      margin-left: 3px
+
+    &.right
+      float: right
+      margin-right: 3px
+
+  .footer-link
+    display: inline-block
     text-decoration: none
     line-height: 16px
     opacity: 0.9
     cursor: pointer
+    padding: 0px 3px
+    border-radius: 3px
 
     &:hover
       opacity: 1
-      text-decoration: underline
 
-    &.right
-      float: right
-      padding-right: 6px
-
-  &[data-color=dark] > a
+  &[data-color=dark] .footer-link
     color: white
     text-shadow: 0px 1px 0px rgba(64, 64, 64, 1)
 
-  &[data-color=light] > a
+    &:hover
+      color: black
+      text-shadow: 0px 1px 0px rgba(190, 190, 190, 1)
+      background-color: rgba(255, 255, 255, 0.6)
+      box-shadow: 1px 1px 0px 0px rgba(255, 255, 255, 0.8)
+
+  &[data-color=light] .footer-link
     color: black
     text-shadow: 0px 1px 0px rgba(190, 190, 190, 1)
 
-#photo-title-link
-  padding-left: 6px
-
-#photo-title-owner-link
-  padding-left: 3px
+    &:hover
+      color: white
+      text-shadow: 0px 1px 0px rgba(64, 64, 64, 1)
+      background-color: rgba(0, 0, 0, 0.6)
+      box-shadow: 1px 1px 0px 0px rgba(0, 0, 0, 0.8)
 
 #photo-refresh-link
   display: inline-block

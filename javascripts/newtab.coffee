@@ -41,8 +41,7 @@ class ChromePicturesNewTab
         @refreshPhoto()
 
     @$photoPinLink.on "click", =>
-      @withLoadingAnimation @$photoPinLink, =>
-        @togglePinned()
+      @togglePinned()
 
     document.body.addEventListener "click", (event) =>
       unless $(event.target).closest(".bookmarks-popup").length
