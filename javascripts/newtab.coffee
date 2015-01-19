@@ -1,5 +1,7 @@
 class ChromePicturesNewTab
   fetchSize: 500
+  poolThreshold: 50
+  licenseQuery: "photo[license=1],photo[license=2],photo[license=4],photo[license=5],photo[license=7]"
   attrRegexp: new RegExp("^[^-]+-photo-(.+)")
 
   constructor: ($viewport) ->
@@ -73,10 +75,10 @@ class ChromePicturesNewTab
       "Pin"
 
   displayPhoto: (photo) ->
-    console.log "Displaying photo", photo
+    console.log "Displaying photo", photo.title
 
     chrome.storage.local.get ["current-photo-timestamp"], (data) ->
-      console.log "Checking photo timestamp", data
+      console.log "Checking photo timestamp", data["current-photo-timestamp"]
       if !data["current-photo-timestamp"]
         photoTime = (new Date()).getTime()
         console.log "Setting photo timestamp to #{photoTime}"
@@ -198,8 +200,7 @@ class ChromePicturesNewTab
 
   fetchPhoto: ->
     new RSVP.Promise (resolve, reject) =>
-      @fetchPhotos().then (resp) =>
-        photos = $(resp).find("photo").toArray()
+      @fetchPhotos().then (photos) =>
         index = parseInt(Math.random() * photos.length * 10, 10) % photos.length
         photo = photos[index]
         title = photo.getAttribute("title")
@@ -207,7 +208,7 @@ class ChromePicturesNewTab
         ownerName = photo.getAttribute("ownername")
         ownerWebUrl = @ownerWebUrl(photo.getAttribute("owner"))
 
-        console.log "Use photo at index #{index} of #{photos.length} photos", photo
+        console.log "Use photo at index #{index} of #{photos.length} photos"
         console.log " * title: #{title}"
         console.log " * webUrl: #{webUrl}"
         console.log " * ownerName: #{ownerName}"
@@ -252,12 +253,24 @@ class ChromePicturesNewTab
         console.error "Error fetching photo", arguments
         reject.apply(null, arguments)
 
-  fetchPhotos: ->
-    @flickrApiRequest("flickr.interestingness.getList", {
-      per_page: @fetchSize
-      page: 1
-      extras: "license,owner_name"
-    })
+  fetchPhotos: (_date = null, _photos = []) ->
+    if @_cachedPhotos
+      RSVP.resolve(@_cachedPhotos)
+    else
+      _date = new Date() unless _date
+      console.log "Fetching from #{@formatDate(_date)}"
+      @flickrApiRequest("flickr.interestingness.getList", {
+        per_page: @fetchSize
+        page: 1
+        date: @formatDate(_date)
+        extras: "license,owner_name"
+      }).then (resp) =>
+        _photos = _photos.concat($(resp).find(@licenseQuery).toArray())
+        return if _photos.length < @poolThreshold
+          @fetchPhotos(new Date(_date.getTime() - 86400000), _photos)
+        else
+          @_cachedPhotos = _photos
+          @_cachedPhotos
 
   fetchPhotoSizes: (id) ->
     @flickrApiRequest("flickr.photos.getSizes", {
@@ -284,6 +297,23 @@ class ChromePicturesNewTab
 
   ownerWebUrl: (userId) ->
     "https://www.flickr.com/photos/#{userId}"
+
+  formatDate: (date) ->
+    string = "#{date.getFullYear()}"
+    month = date.getMonth() + 1
+    dom = date.getDate()
+
+    string = if month < 10
+      "#{string}-0#{month}"
+    else
+      "#{string}-#{month}"
+
+    string = if dom < 10
+      "#{string}-0#{dom}"
+    else
+      "#{string}-#{dom}"
+
+    string
 
   urlToImageData: (url, contentType) ->
     new RSVP.Promise (resolve) =>
@@ -328,7 +358,6 @@ class ChromePicturesNewTab
     rgb
 
   rgbToGrayscale: (rgb) ->
-    console.log rgb
     (0.21 * rgb.r) + (0.72 * rgb.g) + (0.07 * rgb.b)
 
 window.onload = ->
