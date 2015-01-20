@@ -1,7 +1,8 @@
 class ChromePicturesNewTab
   fetchSize: 500
   poolThreshold: 50
-  licenseQuery: "photo[license=1],photo[license=2],photo[license=4],photo[license=5],photo[license=7]"
+  filterByLicenses: true
+  filteredLicenses: [1, 2, 4, 5, 7]
   attrRegexp: new RegExp("^[^-]+-photo-(.+)")
 
   constructor: ($viewport) ->
@@ -267,7 +268,13 @@ class ChromePicturesNewTab
         date: @formatDate(_date)
         extras: "license,owner_name"
       }).then (resp) =>
-        _photos = _photos.concat($(resp).find(@licenseQuery).toArray())
+        _photos = _photos.concat if @filterByLicenses
+          query = _.map @filteredLicenses, (license) ->
+            "photo[license=#{license}]"
+          $(resp).find(query.join(",")).toArray()
+        else
+          $(resp).find("photo").toArray()
+
         return if _photos.length < @poolThreshold
           @fetchPhotos(new Date(_date.getTime() - 86400000), _photos)
         else
