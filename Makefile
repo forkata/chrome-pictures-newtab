@@ -28,6 +28,7 @@ build/background.js: javascripts/background.coffee
 	cat javascripts/vendor/rsvp-3.0.16.min.js > build/background.js.tmp
 	cat javascripts/vendor/underscore-1.7.0.min.js >> build/background.js.tmp
 	cat javascripts/vendor/jquery-2.1.3.min.js >> build/background.js.tmp
+	cat javascripts/vendor/namespace.js >> build/background.js.tmp
 	cat build/background.js >> build/background.js.tmp
 	mv build/background.js.tmp build/background.js
 
