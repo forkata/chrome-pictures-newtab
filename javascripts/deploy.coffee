@@ -1,1 +1,2 @@
-@ChromePicturesNewTabDeployed = true
+namespace "ChromePicturesNewTab", (exports) ->
+  exports.Deployed = true

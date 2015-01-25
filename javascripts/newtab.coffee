@@ -32,7 +32,7 @@ namespace "ChromePicturesNewTab", (exports) ->
           @displayPhoto(photo)
           @ensureCachedPhoto("next")
 
-      @bookmarksBar = new BookmarksBar()
+      @bookmarksBar = new ChromePicturesNewTab.BookmarksBar()
       @bookmarksBar.render(@$viewport[0])
 
       @$photoRefreshLink.on "click", =>
@@ -73,7 +73,7 @@ namespace "ChromePicturesNewTab", (exports) ->
           data["current-photo-timestamp"] = photoTime
           chrome.storage.local.set data
 
-      if window.ChromePicturesNewTabDeployed
+      if ChromePicturesNewTab.Deployed
         @$photo.css "background-image", "url(#{photo.dataUri})"
       else
         @$photo.css "background-image", "url('#{photo.url}')"
